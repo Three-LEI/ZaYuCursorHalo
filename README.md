@@ -6,9 +6,9 @@
 
 > 制作者：**three-lei × DeepSeek** · 版本 **0.3.0** · MIT License
 
-![ZaYuCursorHalo 设置与极简主色](artifacts/p5-keys-style-color.png)
+![按键设置](artifacts/readme-keys.png)
 
-![按键堆叠](artifacts/p5-key-stack.png)
+![按键堆叠](artifacts/readme-stack.png)
 
 ## 下载 / 快速试用
 
@@ -50,8 +50,7 @@ scripts\build-win7-x86.cmd
 
 ## 配置
 
-配置自动保存到 `%APPDATA%\ZaYuCursorHalo\config.ini`。首次运行会尝试从旧的
-`%APPDATA%\CursorHalo\config.ini` 迁移一次。
+配置自动保存到 `%APPDATA%\ZaYuCursorHalo\config.ini`。
 
 主要字段：
 

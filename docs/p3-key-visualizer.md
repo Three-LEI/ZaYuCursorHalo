@@ -55,7 +55,7 @@
 - 右键右色块恢复自动；
 - 主色只作用于极简皮肤。
 
-![皮肤与主色](../artifacts/p5-keys-style-color.png)
+![皮肤与主色](../artifacts/readme-keys.png)
 
 ![机械皮肤](../artifacts/p5-skin-mechanical.png)
 
@@ -72,9 +72,7 @@
 - 单独按修饰键不占历史行；
 - 关闭后立即清空历史，只显示当前组合。
 
-![堆叠设置](../artifacts/p5-key-stack-settings.png)
-
-![堆叠效果](../artifacts/p5-key-stack.png)
+![堆叠设置](../artifacts/readme-stack.png)
 
 ## 连续输入
 

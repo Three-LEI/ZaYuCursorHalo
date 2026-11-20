@@ -1635,7 +1635,7 @@ bool SettingsWindow::CreateTextFormats()
     }
 
     if (!CreateTextFormat(
-            dwriteFactory_.Get(), family, 14.5f, DWRITE_FONT_WEIGHT_SEMI_BOLD,
+            dwriteFactory_.Get(), family, 12.0f, DWRITE_FONT_WEIGHT_SEMI_BOLD,
             DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_NEAR,
             brandFormat_.GetAddressOf()))
         return false;
