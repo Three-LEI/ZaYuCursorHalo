@@ -35,6 +35,8 @@ public:
         bool showLetterKeys,
         bool keyStack,
         int keyStackDelayMs,
+        int keyScalePercent,
+        int keyOpacityPercent,
         bool keyTextAuto,
         unsigned keyTextRgb,
         bool keyStyleAuto,
@@ -145,6 +147,8 @@ private:
     bool showLetterKeys_ = false;
     bool stackKeys_ = false;
     int stackDelayMs_ = 650;
+    float keyScale_ = 1.0f;
+    float keyOpacity_ = 1.0f;
     bool keyTextAuto_ = true;
     unsigned keyTextRgb_ = 0xFFFFFF;
     bool keyStyleAuto_ = true;

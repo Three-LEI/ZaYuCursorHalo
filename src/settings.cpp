@@ -63,6 +63,10 @@ std::wstring BuildIni(const AppSettings& settings)
     text += settings.keyStack ? L"1" : L"0";
     text += L"\r\nstack_delay_ms=";
     text += std::to_wstring(settings.keyStackDelayMs);
+    text += L"\r\nscale_percent=";
+    text += std::to_wstring(settings.keyScalePercent);
+    text += L"\r\nopacity_percent=";
+    text += std::to_wstring(settings.keyOpacityPercent);
     text += L"\r\nstyle_color=";
     text += settings.keyStyleAuto ? L"auto" : FormatRgbHex(settings.keyStyleRgb);
     text += L"\r\nfill_color=";
@@ -213,6 +217,10 @@ AppSettings SettingsStore::Load(const std::wstring& path)
     const int stackDelay = static_cast<int>(
         GetPrivateProfileIntW(L"keys", L"stack_delay_ms", 650, path.c_str()));
     settings.keyStackDelayMs = (std::max)(0, (std::min)(3000, stackDelay));
+    settings.keyScalePercent = (std::max)(70, (std::min)(
+        150, static_cast<int>(GetPrivateProfileIntW(L"keys", L"scale_percent", 100, path.c_str()))));
+    settings.keyOpacityPercent = (std::max)(20, (std::min)(
+        100, static_cast<int>(GetPrivateProfileIntW(L"keys", L"opacity_percent", 100, path.c_str()))));
     wchar_t keyColor[32] = {};
     GetPrivateProfileStringW(L"keys", L"fill_color", L"FFFFFF", keyColor, _countof(keyColor), path.c_str());
     ParseRgbHex(keyColor, settings.keyFillRgb, 0xFFFFFF);

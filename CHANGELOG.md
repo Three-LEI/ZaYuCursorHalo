@@ -6,6 +6,8 @@
 
 - Mouse halo with ring, double-ring, crosshair and dot styles.
 - Global keyboard display with 4 built-in skins and a minimal main color.
+- Key display scale (70%–150%) and opacity (20%–100%), both inside the preview card.
+- Custom-position placement now shows a translucent keyboard ghost for previewing.
 - Key stack display with independent delay and enter/exit slide/fade animations.
 - Floating timer: count-up/countdown, custom 1–99 minutes, segments and last split.
 - Mouse trail, left/right click ripples and ten click-sound presets.

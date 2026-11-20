@@ -149,6 +149,8 @@ struct AppSettings
     std::wstring keyPosition = L"bottom";
     int keyDelayMs = 650;
     bool showLetterKeys = false;
+    int keyScalePercent = 100;
+    int keyOpacityPercent = 100;
     bool keyStack = false;
     int keyStackDelayMs = 650;
     unsigned keyFillRgb = 0xFFFFFF;

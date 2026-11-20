@@ -488,6 +488,46 @@ void SettingsWindow::SetKeyPosition(KeyPosition position)
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+void SettingsWindow::SetKeyScale(int percent)
+{
+    if (!settings_)
+        return;
+    const int value = (std::max)(70, (std::min)(150, percent));
+    if (settings_->keyScalePercent == value)
+        return;
+    settings_->keyScalePercent = value;
+    if (host_)
+        host_->OnSettingsKeyDisplayChanged();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::SetKeyOpacity(int percent)
+{
+    if (!settings_)
+        return;
+    const int value = (std::max)(20, (std::min)(100, percent));
+    if (settings_->keyOpacityPercent == value)
+        return;
+    settings_->keyOpacityPercent = value;
+    if (host_)
+        host_->OnSettingsKeyDisplayChanged();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::UpdateKeyScaleValue(float x)
+{
+    const D2D1_RECT_F track = KeyScaleTrackRect();
+    const float fraction = Clamp01((x - track.left) / (track.right - track.left));
+    SetKeyScale(70 + static_cast<int>(std::lround(fraction * 80.0f)));
+}
+
+void SettingsWindow::UpdateKeyOpacityValue(float x)
+{
+    const D2D1_RECT_F track = KeyOpacityTrackRect();
+    const float fraction = Clamp01((x - track.left) / (track.right - track.left));
+    SetKeyOpacity(20 + static_cast<int>(std::lround(fraction * 80.0f)));
+}
+
 void SettingsWindow::SetKeyDelay(int delayMs)
 {
     if (!settings_)
@@ -575,6 +615,8 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::KeyPositionCursor);
         order.push_back(FocusId::KeyPositionCustom);
         order.push_back(FocusId::KeyDelay);
+        order.push_back(FocusId::KeyScale);
+        order.push_back(FocusId::KeyOpacity);
         order.push_back(FocusId::KeyLetters);
         order.push_back(FocusId::KeyTextAuto);
         order.push_back(FocusId::KeyTextColor);
@@ -798,6 +840,48 @@ bool SettingsWindow::HandleFocusKey(WPARAM key)
         else
             return false;
         SetKeyDelay(value);
+        return true;
+    }
+
+    if (focus_ == FocusId::KeyScale)
+    {
+        int value = settings_->keyScalePercent;
+        if (key == VK_LEFT || key == VK_DOWN)
+            value -= 5;
+        else if (key == VK_RIGHT || key == VK_UP)
+            value += 5;
+        else if (key == VK_PRIOR)
+            value += 10;
+        else if (key == VK_NEXT)
+            value -= 10;
+        else if (key == VK_HOME)
+            value = 70;
+        else if (key == VK_END)
+            value = 150;
+        else
+            return false;
+        SetKeyScale(value);
+        return true;
+    }
+
+    if (focus_ == FocusId::KeyOpacity)
+    {
+        int value = settings_->keyOpacityPercent;
+        if (key == VK_LEFT || key == VK_DOWN)
+            value -= 5;
+        else if (key == VK_RIGHT || key == VK_UP)
+            value += 5;
+        else if (key == VK_PRIOR)
+            value += 10;
+        else if (key == VK_NEXT)
+            value -= 10;
+        else if (key == VK_HOME)
+            value = 20;
+        else if (key == VK_END)
+            value = 100;
+        else
+            return false;
+        SetKeyOpacity(value);
         return true;
     }
 
@@ -1253,6 +1337,12 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
     case FocusId::KeyDelay:
         StrokeRounded(Rect(184.0f, 402.0f, 580.0f, 430.0f), 8.0f, focusColor, 1.6f);
         break;
+    case FocusId::KeyScale:
+        StrokeRounded(Rect(384.0f, 112.0f, 564.0f, 136.0f), 7.0f, focusColor, 1.6f);
+        break;
+    case FocusId::KeyOpacity:
+        StrokeRounded(Rect(384.0f, 140.0f, 564.0f, 164.0f), 7.0f, focusColor, 1.6f);
+        break;
     case FocusId::KeyLetters:
         StrokeRounded(Rect(532.0f, 442.0f, 580.0f, 472.0f), 8.0f, focusColor, 1.6f);
         break;
@@ -1634,6 +1724,7 @@ bool SettingsWindow::EnsureRenderTarget()
 
 void SettingsWindow::DiscardRenderTarget()
 {
+    previewLayer_.Reset();
     brush_.Reset();
     renderTarget_.Reset();
     targetWidth_ = 0;
@@ -2190,26 +2281,48 @@ void SettingsWindow::DrawKeyPreviewCaps(const D2D1_COLOR_F& accent)
     const float widths[2] = {54.0f, 34.0f};
     const wchar_t* labels[2] = {L"Ctrl", L"S"};
     const float total = widths[0] + widths[1] + separator;
-    float left = (card.left + card.right) / 2.0f - total / 2.0f;
-    float top = card.bottom - 16.0f - capHeight;
-    if (position == KeyPosition::TopCenter)
+    const float factor =
+        static_cast<float>((std::max)(70, (std::min)(150, settings_->keyScalePercent))) / 100.0f;
+    const D2D1_POINT_2F anchor =
+        D2D1::Point2F((card.left + card.right) / 2.0f, card.bottom - 16.0f);
+    const D2D1::Matrix3x2F previewTransform =
+        D2D1::Matrix3x2F::Translation(-anchor.x, -anchor.y) *
+        D2D1::Matrix3x2F::Scale(factor, factor) *
+        D2D1::Matrix3x2F::Translation(anchor.x, anchor.y);
+    renderTarget_->SetTransform(previewTransform);
+
+    bool layerPushed = false;
+    const float previewOpacity = static_cast<float>(
+        (std::max)(20, (std::min)(100, settings_->keyOpacityPercent))) / 100.0f;
+    if (previewOpacity < 0.995f)
     {
-        top = card.top + 40.0f;
+        if (!previewLayer_)
+            renderTarget_->CreateLayer(previewLayer_.GetAddressOf());
+        if (previewLayer_)
+        {
+            D2D1_LAYER_PARAMETERS parameters = D2D1::LayerParameters();
+            parameters.opacity = previewOpacity;
+            renderTarget_->PushLayer(parameters, previewLayer_.Get());
+            layerPushed = true;
+        }
     }
-    else if (position == KeyPosition::FollowCursor || position == KeyPosition::Custom)
+
+    float left = (card.left + card.right) / 2.0f - total / 2.0f;
+    const float top = card.bottom - 16.0f - capHeight;
+    if (position == KeyPosition::FollowCursor || position == KeyPosition::Custom)
     {
-        top = (card.top + card.bottom) / 2.0f - capHeight / 2.0f;
         left += 18.0f;
         if (position == KeyPosition::FollowCursor && cursorGeometry_)
         {
             renderTarget_->SetTransform(
+                previewTransform *
                 D2D1::Matrix3x2F::Translation(left - 28.0f, top + 3.0f) *
                 D2D1::Matrix3x2F::Scale(0.72f, 0.72f));
             brush_->SetColor(Rgb(0xFFFFFF));
             renderTarget_->FillGeometry(cursorGeometry_.Get(), brush_.Get());
             brush_->SetColor(Rgb(0x2A2C31, 0.88f));
             renderTarget_->DrawGeometry(cursorGeometry_.Get(), brush_.Get(), 1.0f);
-            renderTarget_->SetTransform(D2D1::Matrix3x2F::Identity());
+            renderTarget_->SetTransform(previewTransform);
         }
         else
         {
@@ -2256,6 +2369,44 @@ void SettingsWindow::DrawKeyPreviewCaps(const D2D1_COLOR_F& accent)
         false,
         skin,
         accent);
+    if (layerPushed)
+        renderTarget_->PopLayer();
+    renderTarget_->SetTransform(D2D1::Matrix3x2F::Identity());
+}
+
+void SettingsWindow::DrawPreviewSlider(
+    const wchar_t* label,
+    const std::wstring& value,
+    float centerY,
+    float fraction,
+    const D2D1_RECT_F& track,
+    const D2D1_COLOR_F& accent)
+{
+    DrawTextBlock(
+        label,
+        captionFormat_.Get(),
+        Rect(204.0f, centerY - 9.0f, 300.0f, centerY + 9.0f),
+        palette_.muted);
+    DrawTextBlock(
+        value.c_str(),
+        valueRightFormat_.Get(),
+        Rect(300.0f, centerY - 9.0f, 378.0f, centerY + 9.0f),
+        palette_.subtle);
+
+    const float y = (track.top + track.bottom) / 2.0f;
+    FillRounded(
+        Rect(track.left, y - 2.0f, track.right, y + 2.0f),
+        2.0f,
+        palette_.divider);
+    const float x = track.left + (track.right - track.left) * Clamp01(fraction);
+    FillRounded(
+        Rect(track.left, y - 2.0f, x, y + 2.0f),
+        2.0f,
+        accent);
+    brush_->SetColor(accent);
+    renderTarget_->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), 7.0f, 7.0f), brush_.Get());
+    brush_->SetColor(Rgb(0xFFFFFF, 0.85f));
+    renderTarget_->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), 2.2f, 2.2f), brush_.Get());
 }
 
 void SettingsWindow::DrawKeysPage(const D2D1_COLOR_F& accent)
@@ -2276,6 +2427,25 @@ void SettingsWindow::DrawKeysPage(const D2D1_COLOR_F& accent)
         valueRightFormat_.Get(),
         Rect(kContentX + 260.0f, 94.0f, kContentX + kContentW - 16.0f, 112.0f),
         palette_.subtle);
+
+    const float scaleFraction =
+        static_cast<float>(settings_->keyScalePercent - 70) / 80.0f;
+    const float opacityFraction =
+        static_cast<float>(settings_->keyOpacityPercent - 20) / 80.0f;
+    DrawPreviewSlider(
+        L"缩放",
+        std::to_wstring(settings_->keyScalePercent) + L"%",
+        124.0f,
+        scaleFraction,
+        KeyScaleTrackRect(),
+        accent);
+    DrawPreviewSlider(
+        L"不透明度",
+        std::to_wstring(settings_->keyOpacityPercent) + L"%",
+        152.0f,
+        opacityFraction,
+        KeyOpacityTrackRect(),
+        accent);
 
     DrawKeyPreviewCaps(accent);
 
@@ -3553,6 +3723,16 @@ D2D1_RECT_F SettingsWindow::KeyDelayTrackRect() const
     return Rect(kContentX, 404.0f, kContentX + kContentW, 428.0f);
 }
 
+D2D1_RECT_F SettingsWindow::KeyScaleTrackRect() const
+{
+    return Rect(388.0f, 116.0f, 560.0f, 132.0f);
+}
+
+D2D1_RECT_F SettingsWindow::KeyOpacityTrackRect() const
+{
+    return Rect(388.0f, 144.0f, 560.0f, 160.0f);
+}
+
 D2D1_RECT_F SettingsWindow::KeyLettersRowRect() const
 {
     return Rect(kContentX, 442.0f, kContentX + kContentW, 472.0f);
@@ -3835,6 +4015,22 @@ void SettingsWindow::OnLeftDown(float x, float y)
             UpdateKeyDelayValue(x);
             return;
         }
+        if (InRect(x, y, KeyScaleTrackRect()))
+        {
+            SetFocusId(FocusId::KeyScale);
+            sliderDrag_ = SliderDrag::KeyScale;
+            SetCapture(hwnd_);
+            UpdateKeyScaleValue(x);
+            return;
+        }
+        if (InRect(x, y, KeyOpacityTrackRect()))
+        {
+            SetFocusId(FocusId::KeyOpacity);
+            sliderDrag_ = SliderDrag::KeyOpacity;
+            SetCapture(hwnd_);
+            UpdateKeyOpacityValue(x);
+            return;
+        }
 
         if (InRect(x, y, KeyLettersRowRect()))
         {
@@ -4105,6 +4301,16 @@ void SettingsWindow::OnMouseMove(float x, float y)
     if (sliderDrag_ == SliderDrag::KeyDelay)
     {
         UpdateKeyDelayValue(x);
+        return;
+    }
+    if (sliderDrag_ == SliderDrag::KeyScale)
+    {
+        UpdateKeyScaleValue(x);
+        return;
+    }
+    if (sliderDrag_ == SliderDrag::KeyOpacity)
+    {
+        UpdateKeyOpacityValue(x);
         return;
     }
     if (sliderDrag_ == SliderDrag::StackDelay)
@@ -4739,7 +4945,9 @@ bool SettingsWindow::HitTestInteractive(float x, float y) const
             if (InRect(x, y, KeyPositionChipRect(i)))
                 return true;
         }
-        return InRect(x, y, KeyDelayTrackRect()) || InRect(x, y, KeyLettersRowRect()) ||
+        return InRect(x, y, KeyDelayTrackRect()) ||
+            InRect(x, y, KeyScaleTrackRect()) || InRect(x, y, KeyOpacityTrackRect()) ||
+            InRect(x, y, KeyLettersRowRect()) ||
             InRect(x, y, KeyTextAutoRect()) || InRect(x, y, KeyTextColorRect()) ||
             InRect(x, y, KeyStyleColorRect());
     }

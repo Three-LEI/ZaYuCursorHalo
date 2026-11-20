@@ -18,6 +18,7 @@ constexpr float kBottomMargin = 28.0f;
 constexpr float kFadeMs = 180.0f;
 constexpr float kEnterMs = 140.0f;
 constexpr float kExitMs = 160.0f;
+constexpr float kPlacementOpacity = 0.62f;
 constexpr UINT kTimerIntervalMs = 16;
 
 D2D1_COLOR_F Color(float r, float g, float b, float a = 1.0f)
@@ -517,7 +518,7 @@ void KeyOverlay::UpdatePlacementPosition()
         return;
     destX_ = x;
     destY_ = y;
-    Present(1.0f);
+    Present(kPlacementOpacity);
 }
 
 void KeyOverlay::Configure(
@@ -527,6 +528,8 @@ void KeyOverlay::Configure(
     bool showLetterKeys,
     bool keyStack,
     int keyStackDelayMs,
+    int keyScalePercent,
+    int keyOpacityPercent,
     bool keyTextAuto,
     unsigned keyTextRgb,
     bool keyStyleAuto,
@@ -546,6 +549,8 @@ void KeyOverlay::Configure(
     showLetterKeys_ = showLetterKeys;
     stackKeys_ = keyStack;
     stackDelayMs_ = (std::max)(0, (std::min)(3000, keyStackDelayMs));
+    keyScale_ = static_cast<float>((std::max)(70, (std::min)(150, keyScalePercent))) / 100.0f;
+    keyOpacity_ = static_cast<float>((std::max)(20, (std::min)(100, keyOpacityPercent))) / 100.0f;
     if (!stackKeys_)
         history_.clear();
     keyTextAuto_ = keyTextAuto;
@@ -1219,7 +1224,7 @@ void KeyOverlay::Render()
     if (placementMode_)
     {
         if (!labels_.empty())
-            rows.push_back({&labels_, now, 0});
+            rows.push_back({&labels_, now - static_cast<ULONGLONG>(kEnterMs), 0});
     }
     else
     {
@@ -1294,11 +1299,12 @@ void KeyOverlay::Render()
     const bool placement = placementMode_;
     const float hintHeight = placement ? 18.0f : 0.0f;
     constexpr float kRowGap = 8.0f;
-    const float windowWidthDip = maxWidth + kMargin * 2.0f;
+    const float baseWindowWidth = maxWidth + kMargin * 2.0f;
+    const float windowWidthDip = baseWindowWidth * keyScale_;
     const float windowHeightDip =
-        kCapHeight * static_cast<float>(measured.size()) +
-        kRowGap * static_cast<float>(measured.size() - 1) +
-        kMargin * 2.0f + hintHeight;
+        (kCapHeight * static_cast<float>(measured.size()) +
+         kRowGap * static_cast<float>(measured.size() - 1) +
+         kMargin * 2.0f + hintHeight) * keyScale_;
     const UINT pixelWidth = (std::max)(1L, std::lround(windowWidthDip * scale));
     const UINT pixelHeight = (std::max)(1L, std::lround(windowHeightDip * scale));
     if (!EnsureSurface(pixelWidth, pixelHeight, placement_.dpi))
@@ -1308,6 +1314,7 @@ void KeyOverlay::Render()
     renderTarget_->BeginDraw();
     renderTarget_->SetTransform(D2D1::Matrix3x2F::Identity());
     renderTarget_->Clear(Color(0.0f, 0.0f, 0.0f, 0.0f));
+    renderTarget_->SetTransform(D2D1::Matrix3x2F::Scale(keyScale_, keyScale_));
 
     const D2D1_COLOR_F accent = UiColor(accentRgb_);
     D2D1_COLOR_F keyTextColor = palette_.text;
@@ -1343,7 +1350,7 @@ void KeyOverlay::Render()
             brush_.Get(),
             L"单击确认 / Esc 取消",
             placementHintFormat_.Get(),
-            Rect(0.0f, 2.0f, windowWidthDip, 18.0f),
+            Rect(0.0f, 2.0f, baseWindowWidth, 18.0f),
             palette_.muted);
     }
 
@@ -1427,7 +1434,7 @@ void KeyOverlay::Render()
     if (destY_ < placement_.work.top + edge)
         destY_ = placement_.work.top + edge;
 
-    Present(1.0f);
+    Present(placement ? kPlacementOpacity : 1.0f);
 }
 
 bool KeyOverlay::Present(float opacity)
@@ -1436,6 +1443,7 @@ bool KeyOverlay::Present(float opacity)
         return false;
 
     opacity = (std::max)(0.0f, (std::min)(1.0f, opacity));
+    const float windowAlpha = opacity * keyOpacity_;
     renderTarget_->BeginDraw();
     HDC sourceDc = nullptr;
     const HRESULT dcHr = gdiInterop_->GetDC(D2D1_DC_INITIALIZE_MODE_COPY, &sourceDc);
@@ -1453,7 +1461,7 @@ bool KeyOverlay::Present(float opacity)
     SIZE size = {static_cast<LONG>(pixelWidth_), static_cast<LONG>(pixelHeight_)};
     BLENDFUNCTION blend = {};
     blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = static_cast<BYTE>(std::lround(opacity * 255.0f));
+    blend.SourceConstantAlpha = static_cast<BYTE>(std::lround(windowAlpha * 255.0f));
     blend.AlphaFormat = AC_SRC_ALPHA;
 
     const BOOL ok = UpdateLayeredWindow(

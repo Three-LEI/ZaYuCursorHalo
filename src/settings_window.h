@@ -69,6 +69,8 @@ private:
         Radius,
         Opacity,
         KeyDelay,
+        KeyScale,
+        KeyOpacity,
         StackDelay,
     };
 
@@ -127,6 +129,8 @@ private:
         KeyPositionCursor,
         KeyPositionCustom,
         KeyDelay,
+        KeyScale,
+        KeyOpacity,
         KeyLetters,
         KeyTextAuto,
         KeyTextColor,
@@ -187,6 +191,13 @@ private:
     void DrawKeysPage(const D2D1_COLOR_F& accent);
     void DrawTimerPage(const D2D1_COLOR_F& accent);
     void DrawClickPage(const D2D1_COLOR_F& accent);
+    void DrawPreviewSlider(
+        const wchar_t* label,
+        const std::wstring& value,
+        float centerY,
+        float fraction,
+        const D2D1_RECT_F& track,
+        const D2D1_COLOR_F& accent);
     void DrawStackPage(const D2D1_COLOR_F& accent);
     void DrawSkinPage(const D2D1_COLOR_F& accent);
     void DrawGeneralPage(const D2D1_COLOR_F& accent);
@@ -239,7 +250,11 @@ private:
     void SetKeyPosition(KeyPosition position);
     void SetKeyDelay(int delayMs);
     void SetKeyLetters(bool enabled);
+    void SetKeyScale(int percent);
+    void SetKeyOpacity(int percent);
     void UpdateKeyDelayValue(float x);
+    void UpdateKeyScaleValue(float x);
+    void UpdateKeyOpacityValue(float x);
     void UpdateStackDelayValue(float x);
     std::vector<FocusId> BuildFocusOrder() const;
     void SetFocusId(FocusId id);
@@ -281,6 +296,8 @@ private:
     D2D1_RECT_F KeySkinChipRect(int index) const;
     D2D1_RECT_F KeyPositionChipRect(int index) const;
     D2D1_RECT_F KeyDelayTrackRect() const;
+    D2D1_RECT_F KeyScaleTrackRect() const;
+    D2D1_RECT_F KeyOpacityTrackRect() const;
     D2D1_RECT_F KeyLettersRowRect() const;
     D2D1_RECT_F KeyLettersToggleRect() const;
     D2D1_RECT_F KeyTextAutoRect() const;
@@ -349,6 +366,7 @@ private:
     Microsoft::WRL::ComPtr<ID2D1HwndRenderTarget> renderTarget_;
     Microsoft::WRL::ComPtr<IDWriteFactory> dwriteFactory_;
     Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> brush_;
+    Microsoft::WRL::ComPtr<ID2D1Layer> previewLayer_;
     Microsoft::WRL::ComPtr<ID2D1PathGeometry> cursorGeometry_;
 
     Microsoft::WRL::ComPtr<IDWriteTextFormat> brandFormat_;
