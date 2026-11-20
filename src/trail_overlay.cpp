@@ -181,7 +181,7 @@ void TrailOverlay::Update()
     if (!context_ || !running_.load())
         return;
 
-    if (!context_->enabled.load() || context_->settingsOpen.load() ||
+    if (!context_->enabled.load() ||
         context_->trayPanelOpen.load() || context_->benchmark.load())
     {
         Hide();

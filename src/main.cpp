@@ -666,7 +666,9 @@ private:
 
     void ShowSettings()
     {
-        keyOverlay_.SetSuspended(true);
+        // Keep all visual effects live while settings are open. The key
+        // overlay, halo, trail and click feedback should remain inspectable
+        // instead of looking broken behind the settings window.
         if (!settingsWindow_.IsVisible())
         {
             context_.settingsOpen.store(true);
@@ -820,7 +822,6 @@ private:
         context_.settingsOpen.store(false);
         if (context_.stateWake)
             SetEvent(context_.stateWake);
-        keyOverlay_.SetSuspended(false);
         SaveSettingsNow();
     }
 

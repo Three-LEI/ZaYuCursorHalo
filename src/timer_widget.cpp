@@ -356,6 +356,8 @@ void TimerWidget::RebuildLayout()
     if (!hwnd_ || !render_)
         return;
 
+    const int oldWidth = width_;
+    const int oldHeight = height_;
     const POINT anchor = positionSet_
         ? POINT{x_ + (std::max)(width_, 1) / 2, y_ + (std::max)(height_, 1) / 2}
         : POINT{0, 0};
@@ -373,7 +375,7 @@ void TimerWidget::RebuildLayout()
         capsuleHeight - static_cast<int>(std::lround(8.0f * scale_))));
     const int buttonGap = (std::max)(3, static_cast<int>(std::lround(4.0f * scale_)));
     const int textGap = (std::max)(4, static_cast<int>(std::lround(7.0f * scale_)));
-    const int fontPx = (std::max)(13, static_cast<int>(std::lround(capsuleHeight * 0.62f)));
+    const int fontPx = (std::max)(13, static_cast<int>(std::lround(capsuleHeight * 0.46f)));
     EnsureFont(fontPx);
 
     if (!render_->measureFont || render_->measureFontPx != fontPx)
@@ -432,6 +434,15 @@ void TimerWidget::RebuildLayout()
 
     width_ = contentWidth + margin * 2;
     height_ = capsuleHeight + margin * 2;
+    if (positionSet_ && oldWidth > 0 && oldHeight > 0 &&
+        (width_ != oldWidth || height_ != oldHeight))
+    {
+        // Keep the visual center stable when the capsule changes size (font
+        // metrics, hour field, segment text, DPI). Otherwise the saved
+        // top-left anchor makes the timer appear to jump right/up.
+        x_ -= (width_ - oldWidth) / 2;
+        y_ -= (height_ - oldHeight) / 2;
+    }
 
     capsuleRect_ = {margin, margin, margin + contentWidth, margin + capsuleHeight};
     int left = margin + padding;
@@ -1010,13 +1021,18 @@ void TimerWidget::Paint()
         ? accentRgb_
         : textRgb;
     Gdiplus::SolidBrush timeBrush(ColorOf(timeRgb));
-    int glyphLeft = timeRect_.left + (timeRect_.right - timeRect_.left - gridWidth) / 2;
+    // DSEG7 has a slightly different optical center from the old Digital-7
+    // face; nudge the glyph grid left/down by a scaled pixel or two so the
+    // digits sit centered in the capsule instead of looking high-right.
+    const int timeNudgeX = (std::max)(1, static_cast<int>(std::lround(2.0f * scale_)));
+    const int timeNudgeY = (std::max)(1, static_cast<int>(std::lround(1.0f * scale_)));
+    int glyphLeft = timeRect_.left + (timeRect_.right - timeRect_.left - gridWidth) / 2 - timeNudgeX;
     for (wchar_t glyph : elapsed)
     {
         const int cellWidth = glyph == L':' ? colonWidth_ : digitWidth_;
         Gdiplus::RectF cell(
             static_cast<Gdiplus::REAL>(glyphLeft),
-            static_cast<Gdiplus::REAL>(timeRect_.top),
+            static_cast<Gdiplus::REAL>(timeRect_.top + timeNudgeY),
             static_cast<Gdiplus::REAL>(cellWidth),
             static_cast<Gdiplus::REAL>(timeRect_.bottom - timeRect_.top));
         graphics.DrawString(&glyph, 1, render_->font, cell, &glyphFormat, &timeBrush);
