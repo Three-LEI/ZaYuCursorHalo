@@ -29,6 +29,7 @@ struct AppContext
     std::atomic<HWND> clickFeedbackWindow{nullptr};
     std::atomic<bool> clickRippleEnabled{false};
     std::atomic<bool> clickSoundEnabled{false};
+    std::atomic<int> clickVolumePercent{100};
     std::atomic<unsigned> clickLeftRgb{0x5B8DFF};
     std::atomic<unsigned> clickRightRgb{0xFF6B6B};
     std::atomic<int> clickSoundPreset{0};

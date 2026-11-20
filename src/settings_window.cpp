@@ -514,6 +514,26 @@ void SettingsWindow::SetKeyOpacity(int percent)
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+void SettingsWindow::SetClickVolume(int percent)
+{
+    if (!settings_)
+        return;
+    const int value = (std::max)(0, (std::min)(100, percent));
+    if (settings_->clickVolumePercent == value)
+        return;
+    settings_->clickVolumePercent = value;
+    if (host_)
+        host_->OnSettingsClickChanged();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::UpdateClickVolumeValue(float x)
+{
+    const D2D1_RECT_F track = ClickVolumeTrackRect();
+    const float fraction = Clamp01((x - track.left) / (track.right - track.left));
+    SetClickVolume(static_cast<int>(std::lround(fraction * 100.0f)));
+}
+
 void SettingsWindow::UpdateKeyScaleValue(float x)
 {
     const D2D1_RECT_F track = KeyScaleTrackRect();
@@ -628,6 +648,7 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::ClickColorRight);
         order.push_back(FocusId::ClickRipple);
         order.push_back(FocusId::ClickSound);
+        order.push_back(FocusId::ClickVolume);
         order.push_back(FocusId::ClickPresetDefault);
         order.push_back(FocusId::ClickPresetSoft);
         order.push_back(FocusId::ClickPresetCrisp);
@@ -882,6 +903,27 @@ bool SettingsWindow::HandleFocusKey(WPARAM key)
         else
             return false;
         SetKeyOpacity(value);
+        return true;
+    }
+
+    if (focus_ == FocusId::ClickVolume)
+    {
+        int value = settings_->clickVolumePercent;
+        if (key == VK_LEFT || key == VK_DOWN)
+            value -= 5;
+        else if (key == VK_RIGHT || key == VK_UP)
+            value += 5;
+        else if (key == VK_PRIOR)
+            value += 10;
+        else if (key == VK_NEXT)
+            value -= 10;
+        else if (key == VK_HOME)
+            value = 0;
+        else if (key == VK_END)
+            value = 100;
+        else
+            return false;
+        SetClickVolume(value);
         return true;
     }
 
@@ -1357,6 +1399,9 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
         break;
     case FocusId::ClickSound:
         StrokeRounded(ClickToggleRect(1), 9.0f, focusColor, 1.6f);
+        break;
+    case FocusId::ClickVolume:
+        StrokeRounded(Rect(388.0f, 392.0f, 502.0f, 416.0f), 7.0f, focusColor, 1.6f);
         break;
     case FocusId::ClickPresetDefault:
     case FocusId::ClickPresetSoft:
@@ -2708,6 +2753,26 @@ void SettingsWindow::DrawClickPage(const D2D1_COLOR_F& accent)
     }
 
     DrawTextBlock(L"音效预设", bodyStrongFormat_.Get(), Rect(kContentX, 394.0f, 300.0f, 416.0f), palette_.text);
+    DrawTextBlock(L"音量", captionFormat_.Get(), Rect(330.0f, 394.0f, 386.0f, 414.0f), palette_.muted);
+    const std::wstring volumeText = std::to_wstring(settings_->clickVolumePercent) + L"%";
+    DrawTextBlock(volumeText.c_str(), valueRightFormat_.Get(), Rect(504.0f, 394.0f, 560.0f, 414.0f), palette_.subtle);
+    const D2D1_RECT_F volumeTrack = ClickVolumeTrackRect();
+    const float volumeY = (volumeTrack.top + volumeTrack.bottom) / 2.0f;
+    FillRounded(
+        Rect(volumeTrack.left, volumeY - 2.0f, volumeTrack.right, volumeY + 2.0f),
+        2.0f,
+        palette_.divider);
+    const float volumeX = volumeTrack.left +
+        (volumeTrack.right - volumeTrack.left) * static_cast<float>(settings_->clickVolumePercent) / 100.0f;
+    FillRounded(
+        Rect(volumeTrack.left, volumeY - 2.0f, volumeX, volumeY + 2.0f),
+        2.0f,
+        accent);
+    brush_->SetColor(accent);
+    renderTarget_->FillEllipse(D2D1::Ellipse(D2D1::Point2F(volumeX, volumeY), 6.0f, 6.0f), brush_.Get());
+    brush_->SetColor(Rgb(0xFFFFFF, 0.85f));
+    renderTarget_->FillEllipse(D2D1::Ellipse(D2D1::Point2F(volumeX, volumeY), 2.0f, 2.0f), brush_.Get());
+
     const wchar_t* presetLabels[5] = {L"默认", L"柔和", L"清脆", L"木质", L"电子"};
     const ClickSoundPreset preset = ParseClickSoundPreset(settings_->clickSoundPreset);
     for (int i = 0; i < 5; ++i)
@@ -2910,7 +2975,7 @@ void SettingsWindow::DrawStackPage(const D2D1_COLOR_F& accent)
         Rect(card.left + 18.0f, card.top + 14.0f, card.right - 18.0f, card.top + 36.0f),
         palette_.text);
     DrawTextBlock(
-        L"新记录在底部，旧记录向上堆叠；单独按修饰键不会占用一行。",
+        L"新记录在底部，旧记录向上堆叠；单独按修饰键也会保留一行。",
         captionFormat_.Get(),
         Rect(card.left + 18.0f, card.top + 40.0f, card.right - 18.0f, card.top + 60.0f),
         palette_.muted);
@@ -3779,6 +3844,11 @@ D2D1_RECT_F SettingsWindow::ClickImportRect() const
     return Rect(kContentX, 462.0f, kContentX + kContentW, 492.0f);
 }
 
+D2D1_RECT_F SettingsWindow::ClickVolumeTrackRect() const
+{
+    return Rect(396.0f, 400.0f, 494.0f, 408.0f);
+}
+
 void SettingsWindow::SwitchPage(Page page)
 {
     if (page_ == page)
@@ -4083,6 +4153,14 @@ void SettingsWindow::OnLeftDown(float x, float y)
                 return;
             }
         }
+        if (InRect(x, y, ClickVolumeTrackRect()))
+        {
+            SetFocusId(FocusId::ClickVolume);
+            sliderDrag_ = SliderDrag::ClickVolume;
+            SetCapture(hwnd_);
+            UpdateClickVolumeValue(x);
+            return;
+        }
         for (int i = 0; i < 5; ++i)
         {
             if (InRect(x, y, ClickPresetChipRect(i)))
@@ -4208,12 +4286,15 @@ void SettingsWindow::OnLeftUp()
 {
     if (draggingWindow_ || sliderDrag_ != SliderDrag::None || colorDrag_ != ColorDrag::None)
     {
+        const bool previewVolume = sliderDrag_ == SliderDrag::ClickVolume;
         draggingWindow_ = false;
         sliderDrag_ = SliderDrag::None;
         colorDrag_ = ColorDrag::None;
         if (GetCapture() == hwnd_)
             ReleaseCapture();
         InvalidateRect(hwnd_, nullptr, FALSE);
+        if (previewVolume && host_)
+            host_->OnSettingsPreviewClickSound(false);
     }
 }
 
@@ -4311,6 +4392,11 @@ void SettingsWindow::OnMouseMove(float x, float y)
     if (sliderDrag_ == SliderDrag::KeyOpacity)
     {
         UpdateKeyOpacityValue(x);
+        return;
+    }
+    if (sliderDrag_ == SliderDrag::ClickVolume)
+    {
+        UpdateClickVolumeValue(x);
         return;
     }
     if (sliderDrag_ == SliderDrag::StackDelay)
@@ -4960,7 +5046,7 @@ bool SettingsWindow::HitTestInteractive(float x, float y) const
     {
         if (InRect(x, y, ClickColorRect(0)) || InRect(x, y, ClickColorRect(1)) ||
             InRect(x, y, ClickToggleRect(0)) || InRect(x, y, ClickToggleRect(1)) ||
-            InRect(x, y, ClickImportRect()))
+            InRect(x, y, ClickImportRect()) || InRect(x, y, ClickVolumeTrackRect()))
         {
             return true;
         }

@@ -100,6 +100,8 @@ std::wstring BuildIni(const AppSettings& settings)
     text += FormatRgbHex(settings.clickLeftRgb);
     text += L"\r\nright_color=";
     text += FormatRgbHex(settings.clickRightRgb);
+    text += L"\r\nvolume=";
+    text += std::to_wstring(settings.clickVolumePercent);
     text += L"\r\nsound_preset=";
     text += settings.clickSoundPreset;
     text += L"\r\nsound_file=";
@@ -258,6 +260,8 @@ AppSettings SettingsStore::Load(const std::wstring& path)
         settings.keyPosition = L"bottom";
     settings.clickRippleEnabled = GetPrivateProfileIntW(L"effects", L"click_ripple", 0, path.c_str()) != 0;
     settings.clickSoundEnabled = GetPrivateProfileIntW(L"effects", L"click_sound", 0, path.c_str()) != 0;
+    settings.clickVolumePercent = (std::max)(0, (std::min)(
+        100, static_cast<int>(GetPrivateProfileIntW(L"effects", L"volume", 100, path.c_str()))));
     wchar_t effectColor[32] = {};
     GetPrivateProfileStringW(L"effects", L"left_color", L"5B8DFF", effectColor, _countof(effectColor), path.c_str());
     ParseRgbHex(effectColor, settings.clickLeftRgb, 0x5B8DFF);

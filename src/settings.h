@@ -165,6 +165,7 @@ struct AppSettings
     bool keyCustomSet = false;
     bool clickRippleEnabled = false;
     bool clickSoundEnabled = false;
+    int clickVolumePercent = 100;
     unsigned clickLeftRgb = 0x5B8DFF;
     unsigned clickRightRgb = 0xFF6B6B;
     std::wstring clickSoundPreset = L"default";

@@ -72,6 +72,7 @@ private:
         KeyScale,
         KeyOpacity,
         StackDelay,
+        ClickVolume,
     };
 
     enum class ColorDrag
@@ -139,6 +140,7 @@ private:
         ClickColorRight,
         ClickRipple,
         ClickSound,
+        ClickVolume,
         ClickPresetDefault,
         ClickPresetSoft,
         ClickPresetCrisp,
@@ -252,7 +254,9 @@ private:
     void SetKeyLetters(bool enabled);
     void SetKeyScale(int percent);
     void SetKeyOpacity(int percent);
+    void SetClickVolume(int percent);
     void UpdateKeyDelayValue(float x);
+    void UpdateClickVolumeValue(float x);
     void UpdateKeyScaleValue(float x);
     void UpdateKeyOpacityValue(float x);
     void UpdateStackDelayValue(float x);
@@ -309,6 +313,7 @@ private:
     D2D1_RECT_F ClickToggleRect(int index) const;
     D2D1_RECT_F ClickPresetChipRect(int index) const;
     D2D1_RECT_F ClickImportRect() const;
+    D2D1_RECT_F ClickVolumeTrackRect() const;
     void ImportClickSound();
     bool HitTestInteractive(float x, float y) const;
     void SwitchPage(Page page);

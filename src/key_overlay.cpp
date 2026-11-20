@@ -575,7 +575,7 @@ void KeyOverlay::Configure(
     if (visible_)
     {
         std::vector<std::wstring> labels;
-        if (BuildDisplay(labels))
+        if (BuildDisplay(latchedKeys_, labels))
         {
             labels_ = std::move(labels);
             labelsStale_ = false;
@@ -588,135 +588,242 @@ void KeyOverlay::Configure(
     }
 }
 
+void KeyOverlay::SyncPhysicalKeys()
+{
+    physicalKeys_.clear();
+    for (int vk = 1; vk < 256; ++vk)
+    {
+        if (vk == VK_PROCESSKEY || vk == VK_PACKET)
+            continue;
+        if (vk >= VK_LBUTTON && vk <= VK_XBUTTON2)
+            continue;
+        if ((GetAsyncKeyState(vk) & 0x8000) != 0)
+            physicalKeys_.push_back(static_cast<UINT>(vk));
+    }
+}
+
+bool KeyOverlay::IsHeld(UINT key) const
+{
+    if (key == 0)
+        return false;
+    if (key == VK_SHIFT)
+    {
+        return (GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0 ||
+            (GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0;
+    }
+    if (key == VK_CONTROL)
+    {
+        return (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0 ||
+            (GetAsyncKeyState(VK_RCONTROL) & 0x8000) != 0;
+    }
+    if (key == VK_MENU)
+    {
+        return (GetAsyncKeyState(VK_LMENU) & 0x8000) != 0 ||
+            (GetAsyncKeyState(VK_RMENU) & 0x8000) != 0;
+    }
+    return (GetAsyncKeyState(static_cast<int>(key)) & 0x8000) != 0;
+}
+
+bool KeyOverlay::SnapshotAlive() const
+{
+    if (labels_.empty())
+        return false;
+    if (snapshotTrigger_ != 0)
+        return IsHeld(snapshotTrigger_);
+    for (UINT key : latchedKeys_)
+    {
+        if (IsHeld(key))
+            return true;
+    }
+    return false;
+}
+
+std::vector<UINT> KeyOverlay::BuildChordKeys(UINT trigger) const
+{
+    std::vector<UINT> keys;
+    const auto append = [&keys](UINT raw) {
+        const UINT canonical = CanonicalKey(raw);
+        if (canonical == 0)
+            return;
+        for (UINT existing : keys)
+        {
+            if (CanonicalKey(existing) == canonical)
+                return;
+        }
+        keys.push_back(raw);
+    };
+
+    for (UINT raw : physicalKeys_)
+    {
+        if (IsModifierKey(CanonicalKey(raw)))
+            append(raw);
+    }
+    append(trigger);
+    return keys;
+}
+
+void KeyOverlay::EndSnapshot(bool force)
+{
+    if (labels_.empty())
+        return;
+    if (!force && SnapshotAlive())
+        return;
+
+    if (stackKeys_)
+    {
+        // A modifier-only snapshot never replaces a shortcut row, but when
+        // released on its own it should still get the normal stack delay and
+        // exit animation instead of blinking out for one frame.
+        PushHistory(true);
+        labels_.clear();
+        latchedKeys_.clear();
+        snapshotTrigger_ = 0;
+        hideAt_ = 0;
+        if (visible_)
+            Render();
+        StartTimer();
+        return;
+    }
+
+    labelsStale_ = true;
+    latchedKeys_.clear();
+    snapshotTrigger_ = 0;
+    if (hideAt_ == 0)
+        hideAt_ = NowMs() + static_cast<ULONGLONG>(delayMs_);
+    StartTimer();
+}
+
 void KeyOverlay::OnKey(WPARAM vk, bool down)
 {
     if (!enabled_ || suspended_ || !hwnd_)
         return;
 
     const UINT key = static_cast<UINT>(vk);
-    if (key == 0 || key == 0xFF || key == VK_PROCESSKEY || key == VK_PACKET)
+    if (key == 0 || key == 0xFF)
         return;
+
+    // Hook traffic can starve WM_TIMER during very fast typing/IME input.
+    // Advance the fade once per key event as well, so the exit animation
+    // keeps moving even when the timer queue is busy.
+    OnTimer();
+
+    if (key == VK_PROCESSKEY || key == VK_PACKET)
+    {
+        // IME consumed the real key. End the snapshot immediately instead of
+        // keeping a stale chord on screen until the IME finishes compositing.
+        SyncPhysicalKeys();
+        physicalKeys_.clear();
+        if (!labels_.empty())
+        {
+            // Keep the normal delay and fade, but never let an IME key-up
+            // restart that delay or rebuild the snapshot.
+            EndSnapshot(true);
+        }
+        else if (stackKeys_ && !history_.empty())
+        {
+            StartTimer();
+        }
+        return;
+    }
+
+    SyncPhysicalKeys();
 
     if (down)
     {
-        if (std::find(physicalKeys_.begin(), physicalKeys_.end(), key) != physicalKeys_.end())
-            return;
+        if (!IsHeld(key))
+            physicalKeys_.push_back(key);
 
-        if (physicalKeys_.empty())
-        {
-            latchedKeys_.clear();
-        }
-        else if (!IsModifierKey(CanonicalKey(key)))
-        {
-            // A new non-modifier key starts a new key display. Keep held
-            // modifiers, but discard earlier non-modifier keys even if the
-            // previous key-up has not been observed yet. Otherwise fast typing
-            // can leave stale keys latched and keep the overlay alive.
-            latchedKeys_.erase(
-                std::remove_if(
-                    latchedKeys_.begin(),
-                    latchedKeys_.end(),
-                    [](UINT raw) { return !IsModifierKey(CanonicalKey(raw)); }),
-                latchedKeys_.end());
-        }
-
-        physicalKeys_.push_back(key);
-        if (std::find(latchedKeys_.begin(), latchedKeys_.end(), key) == latchedKeys_.end())
-            latchedKeys_.push_back(key);
-
+        const std::vector<UINT> chord = BuildChordKeys(key);
         std::vector<std::wstring> labels;
-        if (!BuildDisplay(labels))
+        if (!BuildDisplay(chord, labels))
         {
-            // The key was deliberately filtered out (for example an ordinary
-            // letter while "show letter keys" is off). Do not leave the
-            // previous shortcut on screen just because more keys are down.
-            if (!labels_.empty())
-            {
-                if (stackKeys_)
-                {
-                    PushHistory();
-                    labels_.clear();
-                    Render();
-                    StartTimer();
-                }
-                else if (!labelsStale_)
-                {
-                    // Keep the previous shortcut visible for its normal delay,
-                    // then fade it out. Typing filtered keys must not cut the
-                    // exit animation short.
-                    labelsStale_ = true;
-                    if (hideAt_ == 0)
-                        hideAt_ = NowMs() + static_cast<ULONGLONG>(delayMs_);
-                    StartTimer();
-                }
-            }
-            if (stackKeys_ && !history_.empty())
-                StartTimer();
+            // An ordinary character without a modifier is deliberately
+            // filtered. Keep the previous snapshot's original delay/fade
+            // deadline, but never rebuild or revive it from this keystroke.
+            if (!labels_.empty() && !SnapshotAlive())
+                EndSnapshot(false);
             return;
         }
-        const bool changed = labels != labels_;
-        labelsStale_ = false;
-        if (changed)
+
+        const UINT trigger = IsModifierKey(CanonicalKey(key)) ? 0 : key;
+        if (!labels_.empty() && labels == labels_)
         {
+            latchedKeys_ = chord;
+            snapshotTrigger_ = trigger;
+            labelsStale_ = false;
+            hideAt_ = 0;
+            if (visible_ && opacity_ < 0.99f)
+            {
+                opacity_ = 1.0f;
+                Present(1.0f);
+            }
+            StartTimer();
+            return;
+        }
+
+        if (!labels_.empty())
             PushHistory();
-            labels_ = std::move(labels);
-            labelsStartedAt_ = NowMs();
-            Render();
-        }
-        else if (!visible_)
-        {
-            Render();
-        }
-        else
-        {
-            opacity_ = 1.0f;
-            Present(1.0f);
-        }
+        labels_ = std::move(labels);
+        latchedKeys_ = chord;
+        snapshotTrigger_ = trigger;
+        labelsStartedAt_ = NowMs();
+        labelsStale_ = false;
         hideAt_ = 0;
+        opacity_ = 1.0f;
+        Render();
         StartTimer();
         return;
     }
 
     const auto it = std::find(physicalKeys_.begin(), physicalKeys_.end(), key);
-    if (it == physicalKeys_.end())
+    if (it != physicalKeys_.end())
+        physicalKeys_.erase(it);
+    if (labels_.empty())
         return;
-    physicalKeys_.erase(it);
 
-    // Keep the last chord visible until every key is released. This prevents
-    // the final key of Ctrl+S from disappearing immediately when S is lifted.
-    if (physicalKeys_.empty())
+    if (snapshotTrigger_ == 0)
     {
-        if (stackKeys_ && !labels_.empty())
+        std::vector<UINT> heldModifiers;
+        for (UINT raw : physicalKeys_)
         {
-            PushHistory();
-            labels_.clear();
-            hideAt_ = 0;
+            if (IsModifierKey(CanonicalKey(raw)))
+                heldModifiers.push_back(raw);
+        }
+        std::vector<std::wstring> labels;
+        if (!BuildDisplay(heldModifiers, labels))
+        {
+            EndSnapshot(false);
+            return;
+        }
+        if (labels != labels_)
+        {
+            labels_ = std::move(labels);
+            latchedKeys_ = std::move(heldModifiers);
+            labelsStartedAt_ = NowMs();
+            opacity_ = 1.0f;
             Render();
-            StartTimer();
         }
-        else if (!labels_.empty())
-        {
-            hideAt_ = NowMs() + static_cast<ULONGLONG>(delayMs_);
-            StartTimer();
-        }
-        else
-        {
-            HideNow();
-        }
-    }
-    else if (visible_)
-    {
-        opacity_ = 1.0f;
         hideAt_ = 0;
-        Present(1.0f);
         StartTimer();
+        return;
     }
+
+    if (!SnapshotAlive())
+    {
+        EndSnapshot(false);
+        return;
+    }
+
+    hideAt_ = 0;
+    StartTimer();
 }
 
-bool KeyOverlay::BuildDisplay(std::vector<std::wstring>& labels) const
+bool KeyOverlay::BuildDisplay(
+    const std::vector<UINT>& keys,
+    std::vector<std::wstring>& labels) const
 {
     bool hasModifier = false;
-    for (UINT raw : latchedKeys_)
+    for (UINT raw : keys)
     {
         if (IsModifierKey(CanonicalKey(raw)))
         {
@@ -726,7 +833,7 @@ bool KeyOverlay::BuildDisplay(std::vector<std::wstring>& labels) const
     }
 
     std::vector<DisplayKey> display;
-    for (UINT raw : latchedKeys_)
+    for (UINT raw : keys)
     {
         const UINT canonical = CanonicalKey(raw);
         if (canonical == 0)
@@ -768,7 +875,7 @@ bool KeyOverlay::BuildDisplay(std::vector<std::wstring>& labels) const
     return !labels.empty();
 }
 
-void KeyOverlay::PushHistory()
+void KeyOverlay::PushHistory(bool includeModifiers)
 {
     if (!stackKeys_ || labels_.empty())
         return;
@@ -779,7 +886,7 @@ void KeyOverlay::PushHistory()
             return label != L"Ctrl" && label != L"Shift" &&
                 label != L"Alt" && label != L"Win";
         });
-    if (!hasNonModifier)
+    if (!hasNonModifier && !includeModifiers)
         return;
     HistoryRow row;
     row.labels = labels_;
@@ -1510,7 +1617,10 @@ void KeyOverlay::OnTimer()
         return;
     }
 
-    PruneReleasedKeys();
+    // GetAsyncKeyState is the authority for what is actually down. This
+    // recovers from missed key-ups caused by IME, hook loss, or very fast
+    // typing; no stale key can keep a snapshot alive forever.
+    SyncPhysicalKeys();
     const ULONGLONG now = NowMs();
     const bool historyChanged = PruneHistory(now);
     const auto animating = [&]() {
@@ -1525,100 +1635,70 @@ void KeyOverlay::OnTimer()
         return !labels_.empty() &&
             now - labelsStartedAt_ < static_cast<ULONGLONG>(kEnterMs);
     };
+
     if (stackKeys_)
     {
-        if (!physicalKeys_.empty())
+        if (!labels_.empty() && !SnapshotAlive())
         {
-            hideAt_ = 0;
-            if (historyChanged || animating())
-                Render();
+            EndSnapshot(false);
             return;
-        }
-        bool needsRender = historyChanged || animating();
-        if (!labels_.empty())
-        {
-            PushHistory();
-            labels_.clear();
-            needsRender = true;
         }
         if (history_.empty() && labels_.empty())
         {
             HideNow();
             return;
         }
-        if (needsRender)
+        if (historyChanged || animating())
             Render();
         StartTimer();
         return;
     }
-    if (physicalKeys_.empty())
+
+    if (labels_.empty())
     {
-        if (hideAt_ == 0)
-            hideAt_ = now + static_cast<ULONGLONG>(delayMs_);
-        if (!labels_.empty() &&
-            now - labelsStartedAt_ < static_cast<ULONGLONG>(kEnterMs))
+        HideNow();
+        return;
+    }
+
+    if (SnapshotAlive())
+    {
+        hideAt_ = 0;
+        labelsStale_ = false;
+        if (now - labelsStartedAt_ < static_cast<ULONGLONG>(kEnterMs))
         {
             Render();
             return;
         }
-        if (now < hideAt_)
-            return;
-
-        const float elapsed = static_cast<float>(now - hideAt_);
-        const float opacity = 1.0f - elapsed / kFadeMs;
-        if (opacity <= 0.01f)
+        if (opacity_ < 0.99f)
         {
-            HideNow();
-            return;
+            opacity_ = 1.0f;
+            Present(1.0f);
         }
-        if (std::fabs(opacity - opacity_) > 0.01f)
-            Present(opacity);
         return;
     }
 
-    if (labelsStale_)
+    labelsStale_ = true;
+    latchedKeys_.clear();
+    snapshotTrigger_ = 0;
+    if (hideAt_ == 0)
+        hideAt_ = now + static_cast<ULONGLONG>(delayMs_);
+    if (now - labelsStartedAt_ < static_cast<ULONGLONG>(kEnterMs))
     {
-        if (hideAt_ == 0)
-            hideAt_ = now + static_cast<ULONGLONG>(delayMs_);
-        if (now < hideAt_)
-            return;
-        const float elapsed = static_cast<float>(now - hideAt_);
-        const float opacity = 1.0f - elapsed / kFadeMs;
-        if (opacity <= 0.01f)
-        {
-            HideNow();
-            return;
-        }
-        if (std::fabs(opacity - opacity_) > 0.01f)
-            Present(opacity);
-        return;
-    }
-
-    hideAt_ = 0;
-    if (!labels_.empty() && now - labelsStartedAt_ < static_cast<ULONGLONG>(kEnterMs))
         Render();
-    if (opacity_ < 0.99f)
-    {
-        opacity_ = 1.0f;
-        Present(1.0f);
+        return;
     }
-}
-
-void KeyOverlay::PruneReleasedKeys()
-{
-    std::vector<UINT> kept;
-    kept.reserve(physicalKeys_.size());
-    for (UINT vk : physicalKeys_)
-    {
-        if ((GetAsyncKeyState(static_cast<int>(vk)) & 0x8000) != 0)
-            kept.push_back(vk);
-    }
-    if (kept.size() == physicalKeys_.size())
+    if (now < hideAt_)
         return;
 
-    physicalKeys_ = std::move(kept);
-    if (!stackKeys_ && physicalKeys_.empty() && !labels_.empty() && hideAt_ == 0)
-        hideAt_ = NowMs() + static_cast<ULONGLONG>(delayMs_);
+    const float elapsed = static_cast<float>(now - hideAt_);
+    const float opacity = 1.0f - elapsed / kFadeMs;
+    if (opacity <= 0.01f)
+    {
+        HideNow();
+        return;
+    }
+    if (std::fabs(opacity - opacity_) > 0.01f)
+        Present(opacity);
 }
 
 void KeyOverlay::HideForSuspend()
@@ -1630,6 +1710,7 @@ void KeyOverlay::HideForSuspend()
     placementValid_ = false;
     physicalKeys_.clear();
     latchedKeys_.clear();
+    snapshotTrigger_ = 0;
     labelsStale_ = false;
     labelsStartedAt_ = NowMs();
     for (HistoryRow& row : history_)
@@ -1651,6 +1732,7 @@ void KeyOverlay::HideNow()
     placementValid_ = false;
     physicalKeys_.clear();
     latchedKeys_.clear();
+    snapshotTrigger_ = 0;
     labels_.clear();
     labelsStartedAt_ = 0;
     labelsStale_ = false;

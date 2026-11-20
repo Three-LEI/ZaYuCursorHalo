@@ -4,6 +4,12 @@
 
 ### Added
 
+- Click sound volume (0–100%) with per-sample PCM scaling for presets and custom WAVs.
+- PCM previews are serialized and wait for `WHDR_DONE`, fixing rapid slider preview crashes in `wdmaud.drv`.
+- Short click sounds get silence padding and waveOut retry/fallback, fixing intermittent silent wood previews.
+- IME key-ups no longer restart the fade delay, so old hints cannot freeze half-faded while typing.
+- Key display rebuilt around an immutable chord snapshot plus `GetAsyncKeyState` reconciliation; filtered typing keeps the original delay/fade instead of rebuilding stale keys or resetting the timer.
+- Stack mode gives modifier-only rows the normal stack delay and fade instead of dropping Ctrl/Shift instantly.
 - Mouse halo with ring, double-ring, crosshair and dot styles.
 - Global keyboard display with 4 built-in skins and a minimal main color.
 - Key display scale (70%–150%) and opacity (20%–100%), both inside the preview card.

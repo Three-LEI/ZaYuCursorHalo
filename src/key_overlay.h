@@ -98,8 +98,8 @@ private:
     void EndPlacement(bool confirm);
     bool CreateCatcher();
     void DestroyCatcher();
-    bool BuildDisplay(std::vector<std::wstring>& labels) const;
-    void PushHistory();
+    bool BuildDisplay(const std::vector<UINT>& keys, std::vector<std::wstring>& labels) const;
+    void PushHistory(bool includeModifiers = false);
     bool PruneHistory(ULONGLONG now);
     void DrawRow(
         const std::vector<std::wstring>& row,
@@ -114,7 +114,11 @@ private:
     void HideForSuspend();
     void StartTimer();
     void StopTimer();
-    void PruneReleasedKeys();
+    void SyncPhysicalKeys();
+    bool IsHeld(UINT key) const;
+    bool SnapshotAlive() const;
+    std::vector<UINT> BuildChordKeys(UINT trigger) const;
+    void EndSnapshot(bool force);
     bool EnsurePlacement();
     bool EnsureSurface(UINT pixelWidth, UINT pixelHeight, UINT dpi);
     void DiscardSurface();
@@ -175,6 +179,7 @@ private:
     UINT dpi_ = 96;
     std::vector<UINT> physicalKeys_;
     std::vector<UINT> latchedKeys_;
+    UINT snapshotTrigger_ = 0;
     std::vector<std::wstring> labels_;
     ULONGLONG labelsStartedAt_ = 0;
     std::vector<HistoryRow> history_;

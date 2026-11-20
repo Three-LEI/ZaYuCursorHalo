@@ -10,8 +10,13 @@
 #include <propidl.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 using std::max;
 using std::min;
@@ -49,6 +54,272 @@ Gdiplus::Color MixedColor(unsigned a, unsigned b, float t)
         mix((a >> 16) & 0xFF, (b >> 16) & 0xFF),
         mix((a >> 8) & 0xFF, (b >> 8) & 0xFF),
         mix(a & 0xFF, b & 0xFF));
+}
+
+struct WavView
+{
+    WAVEFORMATEX format = {};
+    const BYTE* data = nullptr;
+    DWORD dataSize = 0;
+};
+
+bool ParseWav(const std::vector<BYTE>& bytes, WavView& view)
+{
+    if (bytes.size() < 12 ||
+        std::memcmp(bytes.data(), "RIFF", 4) != 0 ||
+        std::memcmp(bytes.data() + 8, "WAVE", 4) != 0)
+    {
+        return false;
+    }
+
+    const BYTE* cursor = bytes.data() + 12;
+    const BYTE* end = bytes.data() + bytes.size();
+    bool hasFormat = false;
+    while (cursor + 8 <= end)
+    {
+        const DWORD chunkSize =
+            static_cast<DWORD>(cursor[4]) |
+            (static_cast<DWORD>(cursor[5]) << 8) |
+            (static_cast<DWORD>(cursor[6]) << 16) |
+            (static_cast<DWORD>(cursor[7]) << 24);
+        const BYTE* body = cursor + 8;
+        if (body + chunkSize > end)
+            return false;
+
+        if (std::memcmp(cursor, "fmt ", 4) == 0 && chunkSize >= 16)
+        {
+            const size_t copySize = (std::min)(sizeof(WAVEFORMATEX), static_cast<size_t>(chunkSize));
+            std::memcpy(&view.format, body, copySize);
+            if (copySize < sizeof(WAVEFORMATEX))
+                view.format.cbSize = 0;
+            hasFormat = true;
+        }
+        else if (std::memcmp(cursor, "data", 4) == 0)
+        {
+            view.data = body;
+            view.dataSize = chunkSize;
+        }
+
+        cursor = body + chunkSize + (chunkSize & 1u);
+    }
+
+    if (!hasFormat || !view.data || view.dataSize == 0)
+        return false;
+    if (view.format.wFormatTag != WAVE_FORMAT_PCM)
+        return false;
+    if (view.format.nChannels != 1 && view.format.nChannels != 2)
+        return false;
+    if (view.format.wBitsPerSample != 8 && view.format.wBitsPerSample != 16)
+        return false;
+    if (view.format.nBlockAlign == 0 || view.format.nSamplesPerSec == 0)
+        return false;
+    return true;
+}
+
+std::mutex g_waveMutex;
+std::atomic<unsigned> g_waveGeneration{0};
+
+void PlayPcmAtVolume(
+    WAVEFORMATEX format,
+    std::vector<BYTE> pcm,
+    int volume,
+    HINSTANCE instance,
+    UINT resourceId,
+    std::wstring fallbackPath,
+    unsigned generation)
+{
+    const int clampedVolume = (std::max)(0, (std::min)(100, volume));
+    if (clampedVolume <= 0 || pcm.empty())
+        return;
+
+    // waveOut/WDM is not reliably re-entrant for rapid previews on every
+    // system. Keep one PCM stream open at a time.
+    std::lock_guard<std::mutex> waveLock(g_waveMutex);
+    if (generation != g_waveGeneration.load())
+        return;
+
+    if (format.wBitsPerSample == 16)
+    {
+        const size_t count = pcm.size() / sizeof(short);
+        short* samples = reinterpret_cast<short*>(pcm.data());
+        for (size_t i = 0; i < count; ++i)
+        {
+            const int value = static_cast<int>(samples[i]) * clampedVolume / 100;
+            samples[i] = static_cast<short>((std::max)(-32768, (std::min)(32767, value)));
+        }
+    }
+    else
+    {
+        for (BYTE& sample : pcm)
+        {
+            const int value = 128 + (static_cast<int>(sample) - 128) * clampedVolume / 100;
+            sample = static_cast<BYTE>((std::max)(0, (std::min)(255, value)));
+        }
+    }
+
+    const double durationMs =
+        static_cast<double>(pcm.size()) /
+        static_cast<double>((std::max)(1u, static_cast<unsigned>(format.nAvgBytesPerSec))) * 1000.0;
+    if (durationMs < 150.0 && format.nBlockAlign > 0 && format.nSamplesPerSec > 0)
+    {
+        // Very short clicks can lose the first few milliseconds to WDM device
+        // spin-up (the 40 ms wood preset is especially prone to this). Pad
+        // both ends with silence, but keep the audible part at the same level.
+        const size_t padFrames = format.nSamplesPerSec * 60 / 1000;
+        const size_t padBytes = padFrames * format.nBlockAlign;
+        std::vector<BYTE> padded(
+            pcm.size() + padBytes * 2,
+            format.wBitsPerSample == 8 ? 0x80 : 0x00);
+        std::memcpy(padded.data() + padBytes, pcm.data(), pcm.size());
+        pcm.swap(padded);
+    }
+
+    HWAVEOUT output = nullptr;
+    MMRESULT opened = MMSYSERR_ERROR;
+    for (int attempt = 0; attempt < 3; ++attempt)
+    {
+        opened = waveOutOpen(&output, WAVE_MAPPER, &format, 0, 0, CALLBACK_NULL);
+        if (opened == MMSYSERR_NOERROR)
+            break;
+        Sleep(3);
+    }
+    if (opened != MMSYSERR_NOERROR)
+    {
+        if (resourceId)
+        {
+            PlaySoundW(
+                MAKEINTRESOURCEW(resourceId),
+                instance,
+                SND_RESOURCE | SND_ASYNC | SND_NODEFAULT);
+        }
+        else if (!fallbackPath.empty())
+        {
+            PlaySoundW(
+                fallbackPath.c_str(),
+                nullptr,
+                SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+        }
+        return;
+    }
+
+    bool queued = false;
+    WAVEHDR header = {};
+    header.lpData = reinterpret_cast<LPSTR>(pcm.data());
+    header.dwBufferLength = static_cast<DWORD>(pcm.size());
+    if (waveOutPrepareHeader(output, &header, sizeof(header)) == MMSYSERR_NOERROR)
+    {
+        if (waveOutWrite(output, &header, sizeof(header)) == MMSYSERR_NOERROR)
+        {
+            queued = true;
+            bool done = false;
+            for (int i = 0; i < 6000; ++i)
+            {
+                if ((header.dwFlags & WHDR_DONE) != 0)
+                {
+                    done = true;
+                    break;
+                }
+                Sleep(5);
+            }
+            if (!done)
+                waveOutReset(output);
+        }
+        waveOutUnprepareHeader(output, &header, sizeof(header));
+    }
+    waveOutClose(output);
+
+    if (!queued)
+    {
+        if (resourceId)
+        {
+            PlaySoundW(
+                MAKEINTRESOURCEW(resourceId),
+                instance,
+                SND_RESOURCE | SND_ASYNC | SND_NODEFAULT);
+        }
+        else if (!fallbackPath.empty())
+        {
+            PlaySoundW(
+                fallbackPath.c_str(),
+                nullptr,
+                SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+        }
+    }
+}
+
+bool PlayWavAtVolume(
+    const std::vector<BYTE>& bytes,
+    int volume,
+    HINSTANCE instance,
+    UINT resourceId,
+    const std::wstring& fallbackPath)
+{
+    WavView view;
+    if (!ParseWav(bytes, view))
+        return false;
+    std::vector<BYTE> pcm(view.data, view.data + view.dataSize);
+    const unsigned generation = ++g_waveGeneration;
+    try
+    {
+        std::thread(
+            PlayPcmAtVolume,
+            view.format,
+            std::move(pcm),
+            volume,
+            instance,
+            resourceId,
+            fallbackPath,
+            generation).detach();
+    }
+    catch (...)
+    {
+        return false;
+    }
+    return true;
+}
+
+std::vector<BYTE> ReadResourceBytes(HINSTANCE instance, UINT id)
+{
+    std::vector<BYTE> bytes;
+    HRSRC resource = FindResourceW(instance, MAKEINTRESOURCEW(id), L"WAVE");
+    if (!resource)
+        return bytes;
+    HGLOBAL loaded = LoadResource(instance, resource);
+    const DWORD size = SizeofResource(instance, resource);
+    const void* data = loaded ? LockResource(loaded) : nullptr;
+    if (!data || size == 0)
+        return bytes;
+    const BYTE* first = static_cast<const BYTE*>(data);
+    bytes.assign(first, first + size);
+    return bytes;
+}
+
+std::vector<BYTE> ReadFileBytes(const std::wstring& path)
+{
+    std::vector<BYTE> bytes;
+    HANDLE file = CreateFileW(
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+    if (file == INVALID_HANDLE_VALUE)
+        return bytes;
+    LARGE_INTEGER size = {};
+    if (GetFileSizeEx(file, &size) && size.QuadPart > 0 && size.QuadPart <= 32 * 1024 * 1024)
+    {
+        bytes.resize(static_cast<size_t>(size.QuadPart));
+        DWORD read = 0;
+        if (!ReadFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &read, nullptr) ||
+            read != static_cast<DWORD>(bytes.size()))
+        {
+            bytes.clear();
+        }
+    }
+    CloseHandle(file);
+    return bytes;
 }
 } // namespace
 
@@ -342,6 +613,34 @@ void ClickFeedback::OnClick(int button, POINT point)
     SetTimer(controller_, kAnimationTimer, 16, nullptr);
 }
 
+bool ClickFeedback::PlayMciFile(const std::wstring& path)
+{
+    if (path.empty())
+        return false;
+
+    if (mciPath_ != path)
+    {
+        CloseMci();
+        std::wstring open = L"open \"";
+        open += path;
+        open += L"\" type waveaudio alias ZaYuCursorHaloClickSound";
+        if (mciSendStringW(open.c_str(), nullptr, 0, nullptr) != 0)
+        {
+            mciPath_.clear();
+            return false;
+        }
+        mciPath_ = path;
+    }
+
+    mciSendStringW(L"seek ZaYuCursorHaloClickSound to start", nullptr, 0, nullptr);
+    if (mciSendStringW(L"play ZaYuCursorHaloClickSound", nullptr, 0, nullptr) != 0)
+    {
+        CloseMci();
+        return false;
+    }
+    return true;
+}
+
 void ClickFeedback::PlayClickSound(int preset, bool right)
 {
     static const UINT leftIds[] = {
@@ -359,6 +658,12 @@ void ClickFeedback::PlayClickSound(int preset, bool right)
         IDR_CLICK_SYNTH_RIGHT,
     };
 
+    const int volume = context_
+        ? (std::max)(0, (std::min)(100, context_->clickVolumePercent.load()))
+        : 100;
+    if (volume <= 0)
+        return;
+
     if (preset == static_cast<int>(ClickSoundPreset::Custom) && context_)
     {
         std::wstring path;
@@ -368,46 +673,55 @@ void ClickFeedback::PlayClickSound(int preset, bool right)
         }
         if (!path.empty() && GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES)
         {
-            PlayCustomSound(path);
+            PlayCustomSound(path, volume);
             return;
         }
         preset = static_cast<int>(ClickSoundPreset::Default);
     }
 
     const int index = (std::max)(0, (std::min)(4, preset));
+    if (volume < 100)
+    {
+        const UINT resourceId = right ? rightIds[index] : leftIds[index];
+        const std::vector<BYTE> bytes = ReadResourceBytes(
+            context_->instance,
+            resourceId);
+        if (PlayWavAtVolume(bytes, volume, context_->instance, resourceId, L""))
+            return;
+    }
+
     PlaySoundW(
         MAKEINTRESOURCEW(right ? rightIds[index] : leftIds[index]),
         context_->instance,
         SND_RESOURCE | SND_ASYNC | SND_NODEFAULT);
 }
 
-void ClickFeedback::PlayCustomSound(const std::wstring& path)
+void ClickFeedback::PlayCustomSound(const std::wstring& path, int volume)
 {
-    if (PlaySoundW(
-            path.c_str(),
-            nullptr,
-            SND_FILENAME | SND_ASYNC | SND_NODEFAULT))
+    if (volume < 100)
+    {
+        const std::vector<BYTE> bytes = ReadFileBytes(path);
+        if (PlayWavAtVolume(bytes, volume, nullptr, 0, path))
+            return;
+    }
+    else if (PlaySoundW(
+                 path.c_str(),
+                 nullptr,
+                 SND_FILENAME | SND_ASYNC | SND_NODEFAULT))
     {
         return;
     }
 
-    // Some WAV encodings are not accepted by PlaySound; MCI's waveaudio
-    // driver is a useful Win7-native fallback.
-    if (mciPath_ != path)
-    {
-        CloseMci();
-        std::wstring open = L"open \"";
-        open += path;
-        open += L"\" type waveaudio alias ZaYuCursorHaloClickSound";
-        if (mciSendStringW(open.c_str(), nullptr, 0, nullptr) != 0)
-        {
-            mciPath_.clear();
-            return;
-        }
-        mciPath_ = path;
-    }
-    mciSendStringW(L"seek ZaYuCursorHaloClickSound to start", nullptr, 0, nullptr);
-    mciSendStringW(L"play ZaYuCursorHaloClickSound", nullptr, 0, nullptr);
+    // MCI's waveaudio driver is a useful Win7-native fallback for WAV
+    // encodings PlaySound rejects. It has no reliable per-play volume, so
+    // this path is only used when PCM scaling was not possible.
+    if (PlayMciFile(path))
+        return;
+
+    PlaySoundW(
+        path.c_str(),
+        nullptr,
+        SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
 
 void ClickFeedback::CloseMci()

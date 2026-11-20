@@ -50,7 +50,8 @@ private:
     void DestroySlot(Slot& slot);
     void OnClick(int button, POINT point);
     void PlayClickSound(int preset, bool right);
-    void PlayCustomSound(const std::wstring& path);
+    void PlayCustomSound(const std::wstring& path, int volume);
+    bool PlayMciFile(const std::wstring& path);
     void CloseMci();
     void OnTick();
     void RenderSlot(Slot& slot, ULONGLONG now);

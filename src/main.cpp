@@ -369,6 +369,7 @@ private:
 
         context_.clickRippleEnabled.store(settings_.clickRippleEnabled && benchSeconds_ == 0);
         context_.clickSoundEnabled.store(settings_.clickSoundEnabled && benchSeconds_ == 0);
+        context_.clickVolumePercent.store(settings_.clickVolumePercent);
         context_.clickLeftRgb.store(settings_.clickLeftRgb);
         context_.clickRightRgb.store(settings_.clickRightRgb);
         context_.clickSoundPreset.store(static_cast<int>(ParseClickSoundPreset(settings_.clickSoundPreset)));
@@ -1032,6 +1033,7 @@ private:
     {
         context_.clickRippleEnabled.store(settings_.clickRippleEnabled);
         context_.clickSoundEnabled.store(settings_.clickSoundEnabled);
+        context_.clickVolumePercent.store(settings_.clickVolumePercent);
         context_.clickLeftRgb.store(settings_.clickLeftRgb);
         context_.clickRightRgb.store(settings_.clickRightRgb);
         context_.clickSoundPreset.store(static_cast<int>(ParseClickSoundPreset(settings_.clickSoundPreset)));
