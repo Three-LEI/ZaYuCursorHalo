@@ -1,0 +1,17 @@
+build/
+dist/
+release/
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.aps
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.obj
+*.zip
+*.dmp
+config.ini

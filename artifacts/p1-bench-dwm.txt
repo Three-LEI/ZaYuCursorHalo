@@ -1,0 +1,22 @@
+CursorHalo P0 frame stats
+generated=2026-11-19 02:39:10
+presents=1399
+measured_fps=164.549
+refresh_hz=165.027
+target_interval_ms=6.060
+pacer=dwm
+composition_enabled=1
+radius_dip=36
+benchmark=1
+interval_ms_min=4.912
+interval_ms_p50=6.058
+interval_ms_p95=6.344
+interval_ms_p99=6.504
+interval_ms_max=24.085
+late_frames_over_1.5x=2
+render_ms_p50=0.000
+render_ms_p99=0.000
+present_ms_p50=0.360
+present_ms_p99=0.673
+dwm_wait_ms_p50=5.662
+dwm_wait_ms_p99=6.018
