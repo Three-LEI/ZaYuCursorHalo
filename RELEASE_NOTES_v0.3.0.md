@@ -6,7 +6,7 @@ Windows 7 SP1 x86 优先的原生桌面鼠标高亮 / 键盘显示 / 浮动计�
 
 发布资产：`ZaYuCursorHalo-v0.3.0-win7-x86.zip`
 
-- SHA256: `396374D0BBCEBE2435C6417B04D9C48385B268B33C710F4350B48CAC88A06B06`
+- SHA256: `8A81CEBD773429E58B72642FB3546F8C3DA74664290955197BA26280BD33E761`
 - 解压后直接运行 `ZaYuCursorHalo.exe`，无需安装。
 - 无 .NET / Electron / WebView2 / Qt / VC++ Redistributable 依赖。
 - 普通用户权限运行，不安装服务或驱动。

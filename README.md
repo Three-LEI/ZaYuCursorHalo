@@ -1,10 +1,12 @@
 # ZaYuCursorHalo
 
-一个面向 **Windows 7 SP1 及以上** 的原生桌面高亮工具：托盘常驻，鼠标周围显示低延迟光环，在屏幕底部显示当前按键组合，并在桌面浮动显示可拖动的计时器。
+**专为 Windows 7 优化的原生鼠标工具。**
 
-**当前版本：v0.3.0。功能已完成，Win7 构建门禁 PASS（x86、subsystem 6.01、无 Win8+ 静态导入）。当前环境只在 Windows 11 上跑过构建、门禁和冒烟测试；最新构建尚未在真实 Windows 7 SP1 上完成回归。**
+鼠标高亮、按键显示、浮动计时器，在 Win7 上也能流畅使用。
 
-> 制作者：**three-lei × DeepSeek** · 版本 **0.3.0** · MIT License
+无需安装，无需运行库，无需管理员权限。
+
+> v0.3.0 · MIT License · Windows 7 SP1 / 8 / 10 / 11
 
 ![按键设置](artifacts/readme-keys.png)
 
@@ -105,7 +107,14 @@ scripts\build-win7-x86.cmd
 
 检查失败会拒绝构建。
 
-## Win7 发布前必读
+## Win7 兼容状态
+
+- 当前版本：v0.3.0
+- 构建门禁：PASS（x86、subsystem 6.01、无 Win8+ 静态导入）
+- 当前环境在 Windows 11 上通过构建、门禁和冒烟测试
+- 最新构建仍建议在真实 Windows 7 SP1 上完成一次启动回归
+
+发布前注意：
 
 - 构建门禁 PASS 只能证明 PE 结构和静态导入没有明显 Win8+ 依赖，不能替代真机启动。
 - 发布前在干净 Windows 7 SP1 x86/x64 上解压运行，确认无“无法定位程序输入点”/缺少 DLL 弹窗。
@@ -135,3 +144,7 @@ scripts\build-win7-x86.cmd
   - minimp3：CC0 1.0
   - DSEG7 Modern 字体：SIL OFL 1.1
 - 变更记录：[CHANGELOG.md](CHANGELOG.md)
+
+---
+
+制作：**three-lei × DeepSeek**
