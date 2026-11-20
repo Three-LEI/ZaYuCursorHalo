@@ -1236,10 +1236,10 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
         break;
     }
     case FocusId::Radius:
-        StrokeRounded(Rect(184.0f, 416.0f, 580.0f, 442.0f), 8.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(176.0f, 416.0f, 588.0f, 442.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::Opacity:
-        StrokeRounded(Rect(184.0f, 468.0f, 580.0f, 494.0f), 8.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(176.0f, 468.0f, 588.0f, 494.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::Color0:
     case FocusId::Color1:
@@ -1287,7 +1287,7 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
             1.6f);
         break;
     case FocusId::StackDelay:
-        StrokeRounded(Rect(184.0f, 184.0f, 580.0f, 212.0f), 8.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(176.0f, 184.0f, 588.0f, 212.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::SkinFill:
         StrokeRounded(SkinSwatchRect(0), 8.0f, focusColor, 1.6f);
@@ -1335,13 +1335,13 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
         break;
     }
     case FocusId::KeyDelay:
-        StrokeRounded(Rect(184.0f, 402.0f, 580.0f, 430.0f), 8.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(176.0f, 402.0f, 588.0f, 430.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::KeyScale:
-        StrokeRounded(Rect(384.0f, 112.0f, 564.0f, 136.0f), 7.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(381.0f, 112.0f, 567.0f, 136.0f), 7.0f, focusColor, 1.6f);
         break;
     case FocusId::KeyOpacity:
-        StrokeRounded(Rect(384.0f, 140.0f, 564.0f, 164.0f), 7.0f, focusColor, 1.6f);
+        StrokeRounded(Rect(381.0f, 140.0f, 567.0f, 164.0f), 7.0f, focusColor, 1.6f);
         break;
     case FocusId::KeyLetters:
         StrokeRounded(Rect(532.0f, 442.0f, 580.0f, 472.0f), 8.0f, focusColor, 1.6f);
