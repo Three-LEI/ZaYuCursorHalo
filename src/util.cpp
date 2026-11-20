@@ -69,7 +69,7 @@ std::wstring GetRoamingAppDataDirectory()
 
 std::wstring GetDefaultStatsPath()
 {
-    return GetLocalAppDataDirectory() + L"\\CursorHalo\\p0-stats.txt";
+    return GetLocalAppDataDirectory() + L"\\ZaYuCursorHalo\\p0-stats.txt";
 }
 
 std::wstring GetParentDirectory(const std::wstring& path)

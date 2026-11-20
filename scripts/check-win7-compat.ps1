@@ -1,5 +1,5 @@
 param(
-    [string]$Exe = "dist\CursorHalo.exe",
+    [string]$Exe = "dist\ZaYuCursorHalo.exe",
     [string]$VsPath = ""
 )
 

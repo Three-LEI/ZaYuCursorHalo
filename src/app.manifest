@@ -2,10 +2,10 @@
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity
       type="win32"
-      name="CursorHalo.App"
+      name="ZaYuCursorHalo.App"
       version="0.3.0.0"
       processorArchitecture="*"/>
-  <description>CursorHalo mouse highlight utility</description>
+  <description>ZaYuCursorHalo mouse highlight utility</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>

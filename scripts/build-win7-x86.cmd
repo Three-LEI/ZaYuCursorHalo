@@ -24,11 +24,11 @@ if errorlevel 1 exit /b 2
 "%CMAKE%" --build "%ROOT%\build\win7-x86" --config Release
 if errorlevel 1 exit /b 3
 if not exist "%ROOT%\dist" mkdir "%ROOT%\dist"
-copy /y "%ROOT%\build\win7-x86\Release\CursorHalo.exe" "%ROOT%\dist\CursorHalo.exe" >nul
-powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\check-win7-compat.ps1" -Exe "%ROOT%\dist\CursorHalo.exe" -VsPath "%VSPATH%"
+copy /y "%ROOT%\build\win7-x86\Release\ZaYuCursorHalo.exe" "%ROOT%\dist\ZaYuCursorHalo.exe" >nul
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\check-win7-compat.ps1" -Exe "%ROOT%\dist\ZaYuCursorHalo.exe" -VsPath "%VSPATH%"
 if errorlevel 1 (
     echo.
     echo Win7 compatibility gate failed. Build rejected.
     exit /b 4
 )
-echo Built: %ROOT%\dist\CursorHalo.exe
+echo Built: %ROOT%\dist\ZaYuCursorHalo.exe

@@ -1,4 +1,4 @@
-# CursorHalo Win7 release audit
+# ZaYuCursorHalo Win7 release audit
 
 Date: 2026-11-20  
 Build: `v0.3.0` (0.3.0.0), x86  
@@ -24,7 +24,7 @@ scripts\build-win7-x86.cmd
 and can be run manually:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\CursorHalo.exe
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\ZaYuCursorHalo.exe
 ```
 
 ## 2. Static API surface

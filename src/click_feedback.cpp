@@ -26,8 +26,8 @@ using std::min;
 
 namespace
 {
-constexpr wchar_t kControllerClass[] = L"CursorHalo.ClickFeedback.P1";
-constexpr wchar_t kRippleClass[] = L"CursorHalo.ClickRipple.P1";
+constexpr wchar_t kControllerClass[] = L"ZaYuCursorHalo.ClickFeedback.P1";
+constexpr wchar_t kRippleClass[] = L"ZaYuCursorHalo.ClickRipple.P1";
 
 Gdiplus::Color AccentColor(unsigned rgb, float alpha)
 {
@@ -191,7 +191,7 @@ bool ClickFeedback::CreateController()
     controller_ = CreateWindowExW(
         0,
         kControllerClass,
-        L"CursorHalo click feedback",
+        L"ZaYuCursorHalo click feedback",
         0,
         0,
         0,
@@ -219,7 +219,7 @@ bool ClickFeedback::CreateRippleWindows()
             WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW |
                 WS_EX_TOPMOST | WS_EX_NOACTIVATE,
             kRippleClass,
-            L"CursorHalo click ripple",
+            L"ZaYuCursorHalo click ripple",
             WS_POPUP,
             -10000,
             -10000,
@@ -398,7 +398,7 @@ void ClickFeedback::PlayCustomSound(const std::wstring& path)
         CloseMci();
         std::wstring open = L"open \"";
         open += path;
-        open += L"\" type waveaudio alias CursorHaloClickSound";
+        open += L"\" type waveaudio alias ZaYuCursorHaloClickSound";
         if (mciSendStringW(open.c_str(), nullptr, 0, nullptr) != 0)
         {
             mciPath_.clear();
@@ -406,15 +406,15 @@ void ClickFeedback::PlayCustomSound(const std::wstring& path)
         }
         mciPath_ = path;
     }
-    mciSendStringW(L"seek CursorHaloClickSound to start", nullptr, 0, nullptr);
-    mciSendStringW(L"play CursorHaloClickSound", nullptr, 0, nullptr);
+    mciSendStringW(L"seek ZaYuCursorHaloClickSound to start", nullptr, 0, nullptr);
+    mciSendStringW(L"play ZaYuCursorHaloClickSound", nullptr, 0, nullptr);
 }
 
 void ClickFeedback::CloseMci()
 {
     if (mciPath_.empty())
         return;
-    mciSendStringW(L"close CursorHaloClickSound", nullptr, 0, nullptr);
+    mciSendStringW(L"close ZaYuCursorHaloClickSound", nullptr, 0, nullptr);
     mciPath_.clear();
 }
 

@@ -8,7 +8,7 @@
 
 namespace
 {
-constexpr wchar_t kTrayPanelClass[] = L"CursorHalo.TrayPanel.P1";
+constexpr wchar_t kTrayPanelClass[] = L"ZaYuCursorHalo.TrayPanel.P1";
 constexpr float kWidth = 280.0f;
 constexpr float kHeight = 430.0f;
 constexpr float kToggleTop = 64.0f;
@@ -134,7 +134,7 @@ bool TrayPanel::Create(HINSTANCE instance, TrayPanelHost* host)
     hwnd_ = CreateWindowExW(
         WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
         kTrayPanelClass,
-        L"CursorHalo",
+        L"ZaYuCursorHalo",
         WS_POPUP,
         0,
         0,
@@ -464,7 +464,7 @@ void TrayPanel::Draw()
     brush_->SetColor(accent);
     renderTarget_->DrawEllipse(D2D1::Ellipse(brandCenter, 6.5f, 6.5f), brush_.Get(), 1.4f);
     renderTarget_->FillEllipse(D2D1::Ellipse(brandCenter, 1.8f, 1.8f), brush_.Get());
-    DrawTextBlock(L"CursorHalo", brandFormat_.Get(), Rect(44.0f, 8.0f, 190.0f, 33.0f), palette_.text);
+    DrawTextBlock(L"ZaYuCursorHalo", brandFormat_.Get(), Rect(44.0f, 8.0f, 190.0f, 33.0f), palette_.text);
     DrawTextBlock(
         L"v0.3.0 · three-lei × DeepSeek",
         captionFormat_.Get(),
@@ -529,7 +529,7 @@ void TrayPanel::Draw()
     if (hoverRow_ == Row::Exit)
         FillRounded(exitRow, 9.0f, palette_.hover);
     DrawPowerIcon(D2D1::Point2F(26.0f, kExitTop + 18.0f), palette_.muted);
-    DrawTextBlock(L"退出 CursorHalo", rowFormat_.Get(), Rect(48.0f, kExitTop, 250.0f, kExitBottom), palette_.text);
+    DrawTextBlock(L"退出 ZaYuCursorHalo", rowFormat_.Get(), Rect(48.0f, kExitTop, 250.0f, kExitBottom), palette_.text);
 
     D2D1_RECT_F focusRect = {};
     switch (focusRow_)

@@ -132,6 +132,6 @@ C 盘可用空间从约 15.22 GB 变为 14.47 GB。上述可识别缓存合计�
 
 ## 下一步
 
-1. 以该工具链建立最小的 `CursorHalo` P0 穿刺程序（分层窗口 + D2D 光环 + 托盘 + 热键）。
+1. 以该工具链建立最小的 `ZaYuCursorHalo` P0 穿刺程序（分层窗口 + D2D 光环 + 托盘 + 热键）。
 2. 在 Win11 上先跑通功能与帧率。
 3. 拿到 Win7 环境后按 [technical-roadmap.md](technical-roadmap.md) 的兼容门禁逐项验收。

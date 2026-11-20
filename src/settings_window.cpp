@@ -15,7 +15,7 @@
 
 namespace
 {
-constexpr wchar_t kSettingsClass[] = L"CursorHalo.Settings.P1";
+constexpr wchar_t kSettingsClass[] = L"ZaYuCursorHalo.Settings.P1";
 constexpr UINT kHotkeyCaptureMessage = WM_APP + 32;
 constexpr float kWidth = 600.0f;
 constexpr float kHeight = 560.0f;
@@ -316,7 +316,7 @@ bool SettingsWindow::Create(HINSTANCE instance, AppSettings* settings, SettingsW
     hwnd_ = CreateWindowExW(
         WS_EX_APPWINDOW,
         kSettingsClass,
-        L"CursorHalo 设置",
+        L"ZaYuCursorHalo 设置",
         WS_POPUP,
         0,
         0,
@@ -1545,7 +1545,7 @@ bool SettingsWindow::CreateTextFormats()
     }
 
     if (!CreateTextFormat(
-            dwriteFactory_.Get(), family, 16.0f, DWRITE_FONT_WEIGHT_SEMI_BOLD,
+            dwriteFactory_.Get(), family, 14.5f, DWRITE_FONT_WEIGHT_SEMI_BOLD,
             DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_NEAR,
             brandFormat_.GetAddressOf()))
         return false;
@@ -1701,7 +1701,7 @@ void SettingsWindow::DrawSidebar(const D2D1_COLOR_F& accent)
     renderTarget_->FillEllipse(
         D2D1::Ellipse(brandIcon, 1.8f, 1.8f),
         brush_.Get());
-    DrawTextBlock(L"CursorHalo", brandFormat_.Get(), Rect(44.0f, 19.0f, 150.0f, 43.0f), palette_.text);
+    DrawTextBlock(L"ZaYuCursorHalo", brandFormat_.Get(), Rect(44.0f, 19.0f, 154.0f, 43.0f), palette_.text);
 
     brush_->SetColor(settings_->enabled ? accent : palette_.muted);
     renderTarget_->FillEllipse(
@@ -1736,7 +1736,7 @@ void SettingsWindow::DrawSidebar(const D2D1_COLOR_F& accent)
             active ? activeText : palette_.muted);
     }
 
-    DrawTextBlock(L"v0.3.0 · P4", captionFormat_.Get(), Rect(24.0f, 512.0f, 150.0f, 530.0f), palette_.subtle);
+    DrawTextBlock(L"v0.3.0 · P5", captionFormat_.Get(), Rect(24.0f, 512.0f, 150.0f, 530.0f), palette_.subtle);
     DrawTextBlock(
         L"three-lei × DeepSeek",
         captionFormat_.Get(),
@@ -2951,7 +2951,7 @@ void SettingsWindow::DrawGeneralPage(const D2D1_COLOR_F& accent)
     StrokeLine(kContentX, 372.0f, kContentX + kContentW, 372.0f, palette_.divider, 1.0f);
 
     DrawTextBlock(L"版本", bodyStrongFormat_.Get(), Rect(kContentX, 390.0f, 400.0f, 412.0f), palette_.text);
-    DrawTextBlock(L"CursorHalo 0.3.0 · P4", captionFormat_.Get(), Rect(kContentX, 408.0f, 500.0f, 426.0f), palette_.muted);
+    DrawTextBlock(L"ZaYuCursorHalo 0.3.0", captionFormat_.Get(), Rect(kContentX, 408.0f, 500.0f, 426.0f), palette_.muted);
     DrawTextBlock(
         L"three-lei × DeepSeek",
         captionFormat_.Get(),

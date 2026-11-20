@@ -1,4 +1,4 @@
-# CursorHalo 技术路线
+# ZaYuCursorHalo 技术路线
 
 > 版本：v0.1（规划稿） · 2026-11-18  
 > 目标：先交付一个在 Windows 7 上稳定、低延迟、现代感强的**鼠标跟随高亮**工具；架构为后续按键组合显示留好位置。  
@@ -233,7 +233,7 @@ tools/        性能基准、Win7 导入表检查、截图对比
 
 ```text
 ┌──────────────────────────────────────────────┐
-│  CursorHalo                            —  ×  │
+│  ZaYuCursorHalo                            —  ×  │
 │                                              │
 │   ◯  高亮       鼠标高亮                     │
 │   ◯  外观       让指针始终清晰可见           │
@@ -289,7 +289,7 @@ tools/        性能基准、Win7 导入表检查、截图对比
 
 ## 7. 配置、启动与单实例
 
-- 配置格式：UTF-8 INI，人类可读、易排障；路径 `%APPDATA%\CursorHalo\config.ini`。
+- 配置格式：UTF-8 INI，人类可读、易排障；路径 `%APPDATA%\ZaYuCursorHalo\config.ini`。
 - 便携模式：exe 同目录存在 `portable.flag` 时，配置写 exe 同级 `config.ini`；写入失败则回退 AppData 并提示。
 - 保存策略：写临时文件 → flush → `MoveFileEx(..., MOVEFILE_REPLACE_EXISTING)` 原子替换；退出、设置变更、系统关机时保存。
 - 配置带 schema 版本；旧版本自动迁移，坏配置回退默认值并保留 `.bak`。
@@ -390,7 +390,7 @@ tools/        性能基准、Win7 导入表检查、截图对比
 
 ### P0 · 环境与风险穿刺（约 2–3 天）— **Win11 部分已完成**
 
-> 2026-11-19 已在 Win11 上完成穿刺。可执行文件在 [`dist/CursorHalo.exe`](../dist/CursorHalo.exe)，实测与截图见 [P0 结果](p0-results.md)。真实 Win7 运行时测试仍待环境。
+> 2026-11-19 已在 Win11 上完成穿刺。可执行文件在 [`dist/ZaYuCursorHalo.exe`](../dist/ZaYuCursorHalo.exe)，实测与截图见 [P0 结果](p0-results.md)。真实 Win7 运行时测试仍待环境。
 
 目标：证明最危险的“Win7 + 分层窗口 + 高刷节拍”组合成立。
 
@@ -509,7 +509,7 @@ tools/        性能基准、Win7 导入表检查、截图对比
 
 1. **测试环境**：你是否有可用的 Win7 SP1 x86/x64 虚拟机或真机？没有的话，“绝对兼容”只能做到静态审计，发布前仍需补测。
 2. **兼容范围**：是否接受“Win7 SP1 x86 + x64”，而不是 Win7 RTM、32 位 XP 等更老系统？
-3. **首版外观**：默认跟随系统；Win7 无系统深色设置时自动使用浅色，也可手动切浅色/深色；名字先用 CursorHalo，后续可改。
+3. **首版外观**：默认跟随系统；Win7 无系统深色设置时自动使用浅色，也可手动切浅色/深色；名字先用 ZaYuCursorHalo，后续可改。
 4. **工具链安装**：允许我在本机并存安装 VS 2022 Build Tools + v141 + Windows SDK 10.0.19041（约数 GB），用于 P0 吗？
 5. **首版范围**：确认首版只做跟随高亮 + 托盘 + 设置，不做按键/聚光灯/点击反馈；点击反馈放 P2。
 

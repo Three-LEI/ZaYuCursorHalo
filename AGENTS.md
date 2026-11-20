@@ -1,4 +1,4 @@
-# CursorHalo 工程规则
+# ZaYuCursorHalo 工程规则
 
 ## 最高优先级
 
@@ -27,7 +27,7 @@
 7. 修改后运行冒烟测试：
 
    ```powershell
-   tools\p0-smoke.ps1 -Exe dist\CursorHalo.exe
+   tools\p0-smoke.ps1 -Exe dist\ZaYuCursorHalo.exe
    ```
 
 8. 保留署名：`three-lei × DeepSeek`。

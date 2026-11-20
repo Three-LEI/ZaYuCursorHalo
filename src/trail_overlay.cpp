@@ -22,7 +22,7 @@ using std::min;
 
 namespace
 {
-constexpr wchar_t kTrailClass[] = L"CursorHalo.Trail.P1";
+constexpr wchar_t kTrailClass[] = L"ZaYuCursorHalo.Trail.P1";
 constexpr UINT kFrameIntervalMs = 33;
 constexpr ULONGLONG kTrailLifetimeMs = 320;
 constexpr float kTrailLengthDip = 260.0f;
@@ -163,7 +163,7 @@ bool TrailOverlay::CreateTrailWindow()
         WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW |
             WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
         kTrailClass,
-        L"CursorHalo Trail",
+        L"ZaYuCursorHalo Trail",
         WS_POPUP,
         0,
         0,

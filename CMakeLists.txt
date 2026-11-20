@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 cmake_policy(SET CMP0091 NEW)
 
-project(CursorHalo LANGUAGES CXX RC)
+project(ZaYuCursorHalo LANGUAGES CXX RC)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
-add_executable(CursorHalo WIN32
+add_executable(ZaYuCursorHalo WIN32
     src/main.cpp
     src/mouse_hook.cpp
     src/overlay.cpp
@@ -30,9 +30,9 @@ add_executable(CursorHalo WIN32
     res/dseg7-modern.ttf
 )
 
-target_compile_features(CursorHalo PRIVATE cxx_std_17)
+target_compile_features(ZaYuCursorHalo PRIVATE cxx_std_17)
 
-target_compile_options(CursorHalo PRIVATE
+target_compile_options(ZaYuCursorHalo PRIVATE
     /utf-8
     /W4
     /permissive-
@@ -42,7 +42,7 @@ target_compile_options(CursorHalo PRIVATE
     /Gw
 )
 
-target_compile_definitions(CursorHalo PRIVATE
+target_compile_definitions(ZaYuCursorHalo PRIVATE
     UNICODE
     _UNICODE
     WINVER=0x0601
@@ -52,7 +52,7 @@ target_compile_definitions(CursorHalo PRIVATE
     WIN32_LEAN_AND_MEAN
 )
 
-target_link_libraries(CursorHalo PRIVATE
+target_link_libraries(ZaYuCursorHalo PRIVATE
     d2d1
     dwrite
     windowscodecs
@@ -70,7 +70,7 @@ target_link_libraries(CursorHalo PRIVATE
 
 # A custom manifest is embedded from app.rc. Disable the duplicate manifest
 # that MSBuild would otherwise generate.
-target_link_options(CursorHalo PRIVATE
+target_link_options(ZaYuCursorHalo PRIVATE
     /MANIFEST:NO
     /SUBSYSTEM:WINDOWS,6.01
     /DYNAMICBASE
@@ -79,6 +79,6 @@ target_link_options(CursorHalo PRIVATE
     /OPT:ICF
 )
 
-set_target_properties(CursorHalo PROPERTIES
-    OUTPUT_NAME "CursorHalo"
+set_target_properties(ZaYuCursorHalo PROPERTIES
+    OUTPUT_NAME "ZaYuCursorHalo"
 )

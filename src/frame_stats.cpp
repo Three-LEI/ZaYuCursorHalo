@@ -103,7 +103,7 @@ bool FrameStats::WriteSummary(const std::wstring& path) const
     SYSTEMTIME local = {};
     GetLocalTime(&local);
 
-    std::fprintf(file, "CursorHalo P0 frame stats\n");
+    std::fprintf(file, "ZaYuCursorHalo P0 frame stats\n");
     std::fprintf(file, "generated=%04u-%02u-%02u %02u:%02u:%02u\n",
         local.wYear, local.wMonth, local.wDay, local.wHour, local.wMinute, local.wSecond);
     std::fprintf(file, "presents=%zu\n", samples_.size());

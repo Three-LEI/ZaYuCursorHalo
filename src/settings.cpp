@@ -12,7 +12,10 @@
 namespace
 {
 constexpr wchar_t kRunKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-constexpr wchar_t kRunValue[] = L"CursorHalo";
+constexpr wchar_t kRunValue[] = L"ZaYuCursorHalo";
+constexpr wchar_t kLegacyRunValue[] = L"CursorHalo";
+constexpr wchar_t kAppDataFolder[] = L"ZaYuCursorHalo";
+constexpr wchar_t kLegacyAppDataFolder[] = L"CursorHalo";
 
 int ClampInt(int value, int minimum, int maximum)
 {
@@ -132,7 +135,30 @@ std::wstring GetRunCommand()
 
 std::wstring SettingsStore::DefaultPath()
 {
-    return GetRoamingAppDataDirectory() + L"\\CursorHalo\\config.ini";
+    static std::wstring cached;
+    if (!cached.empty())
+        return cached;
+
+    const std::wstring roaming = GetRoamingAppDataDirectory();
+    if (roaming.empty())
+        return std::wstring();
+
+    const std::wstring directory = roaming + L"\\" + kAppDataFolder;
+    const std::wstring path = directory + L"\\config.ini";
+    CreateDirectoryW(directory.c_str(), nullptr);
+
+    // One-time migration from the pre-rename CursorHalo profile. Keep the old
+    // folder intact; custom sound paths in the copied ini remain valid.
+    if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES)
+    {
+        const std::wstring legacyPath =
+            roaming + L"\\" + kLegacyAppDataFolder + L"\\config.ini";
+        if (GetFileAttributesW(legacyPath.c_str()) != INVALID_FILE_ATTRIBUTES)
+            CopyFileW(legacyPath.c_str(), path.c_str(), FALSE);
+    }
+
+    cached = path;
+    return cached;
 }
 
 AppSettings SettingsStore::Load(const std::wstring& path)
@@ -350,6 +376,10 @@ bool ApplyAutoStart(bool enabled)
         if (result == ERROR_FILE_NOT_FOUND)
             result = ERROR_SUCCESS;
     }
+
+    // Remove the old auto-start entry so Windows 7 does not keep trying to
+    // launch the pre-rename executable.
+    RegDeleteValueW(key, kLegacyRunValue);
 
     RegCloseKey(key);
     return result == ERROR_SUCCESS;

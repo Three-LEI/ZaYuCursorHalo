@@ -46,12 +46,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "three-lei x DeepSeek"
-            VALUE "FileDescription", "CursorHalo mouse highlight and timer"
+            VALUE "FileDescription", "ZaYuCursorHalo mouse highlight and timer"
             VALUE "FileVersion", "0.3.0.0"
-            VALUE "InternalName", "CursorHalo"
+            VALUE "InternalName", "ZaYuCursorHalo"
             VALUE "LegalCopyright", "three-lei x DeepSeek"
-            VALUE "OriginalFilename", "CursorHalo.exe"
-            VALUE "ProductName", "CursorHalo"
+            VALUE "OriginalFilename", "ZaYuCursorHalo.exe"
+            VALUE "ProductName", "ZaYuCursorHalo"
             VALUE "ProductVersion", "0.3.0.0"
         END
     END

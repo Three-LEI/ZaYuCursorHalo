@@ -1,11 +1,11 @@
 param(
-    [string]$Exe = "dist/CursorHalo.exe"
+    [string]$Exe = "dist/ZaYuCursorHalo.exe"
 )
 
 $ErrorActionPreference = "Stop"
 $exePath = (Resolve-Path $Exe).Path
 $artifactRoot = Join-Path (Resolve-Path ".").Path "artifacts"
-$configPath = Join-Path $env:APPDATA "CursorHalo\config.ini"
+$configPath = Join-Path $env:APPDATA "ZaYuCursorHalo\config.ini"
 
 Add-Type -TypeDefinition @'
 using System;
@@ -58,12 +58,12 @@ public static class UiProbe
 }
 '@
 
-Get-Process CursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process ZaYuCursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 400
 $app = Start-Process -FilePath $exePath -ArgumentList @("--settings") -PassThru
 try {
     Start-Sleep -Milliseconds 1200
-    $settings = [UiProbe]::FindByClass("CursorHalo.Settings.P1")
+    $settings = [UiProbe]::FindByClass("ZaYuCursorHalo.Settings.P1")
     if ($settings -eq [IntPtr]::Zero) {
         throw "settings window not found"
     }
@@ -98,11 +98,11 @@ try {
 
     [UiProbe]::Click($left + 556, $top + 99)
     Start-Sleep -Milliseconds 400
-    $runValue = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name CursorHalo -ErrorAction SilentlyContinue).CursorHalo
+    $runValue = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ZaYuCursorHalo -ErrorAction SilentlyContinue).ZaYuCursorHalo
     Write-Host "autostart_value=$runValue"
     [UiProbe]::Click($left + 556, $top + 99)
     Start-Sleep -Milliseconds 400
-    $runValueAfter = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name CursorHalo -ErrorAction SilentlyContinue).CursorHalo
+    $runValueAfter = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ZaYuCursorHalo -ErrorAction SilentlyContinue).ZaYuCursorHalo
     Write-Host "autostart_after=$runValueAfter"
 
     # Highlight tab and set radius to 50 DIP (100 px diameter) at the midpoint.
@@ -126,7 +126,7 @@ try {
     Write-Host "process_alive=$(-not $app.HasExited)"
 }
 finally {
-    $main = [UiProbe]::FindByClass("CursorHalo.Main.P0")
+    $main = [UiProbe]::FindByClass("ZaYuCursorHalo.Main.P0")
     if ($main -ne [IntPtr]::Zero) {
         # WM_CLOSE = 0x0010
         Add-Type -TypeDefinition @'
@@ -136,5 +136,5 @@ public static class Closer { [DllImport("user32.dll")] public static extern bool
         [Closer]::PostMessage($main, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
         Start-Sleep -Milliseconds 500
     }
-    Get-Process CursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process ZaYuCursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
 }

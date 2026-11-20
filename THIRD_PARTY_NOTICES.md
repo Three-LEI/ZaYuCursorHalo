@@ -1,6 +1,6 @@
 # Third-party notices
 
-CursorHalo is MIT licensed. The following third-party components are included
+ZaYuCursorHalo is MIT licensed. The following third-party components are included
 in the source tree or embedded in the release executable.
 
 ## minimp3

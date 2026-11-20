@@ -11,7 +11,7 @@
 
 ## 交付物
 
-- 可执行文件：[`dist/CursorHalo.exe`](../dist/CursorHalo.exe)（0.3.0.0）
+- 可执行文件：[`dist/ZaYuCursorHalo.exe`](../dist/ZaYuCursorHalo.exe)（0.3.0.0）
 - 设置窗口：
   - [通用页（浅色）](../artifacts/p1-settings-general.png)、[通用页（深色）](../artifacts/p1-settings-general-dark.png)
   - [高亮页（浅色）](../artifacts/p1-settings-highlight.png)、[高亮页（深色）](../artifacts/p1-settings-highlight-dark.png)
@@ -150,7 +150,7 @@
 
 ### 配置与开机启动
 
-- 配置路径：`%APPDATA%\CursorHalo\config.ini`。
+- 配置路径：`%APPDATA%\ZaYuCursorHalo\config.ini`。
 - UTF-16 BOM INI；修改后 500 ms 防抖保存，退出/关闭设置时强制落盘。
 - 原子保存：临时文件 → flush → `MoveFileEx` 替换。
 - 启动时读取：
@@ -205,7 +205,7 @@
 | 面板启用开关 | 面板状态即时变为“已暂停/已开启”，配置写回 |
 | 面板“设置…” | 面板隐藏，设置窗口打开；关闭设置后光环恢复 |
 | 点击面板外部 / `Esc` | 面板关闭，光环恢复 |
-| 面板“退出 CursorHalo” | 进程正常退出 |
+| 面板“退出 ZaYuCursorHalo” | 进程正常退出 |
 | 125% DPI 定位 | 面板尺寸/位置正确，位于任务栏上方 8 DIP |
 
 ## 性能回归

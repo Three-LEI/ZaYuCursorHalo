@@ -1,7 +1,7 @@
 # Windows 7 兼容性硬约束
 
 > 生效日期：2026-11-20  
-> 适用范围：CursorHalo 的所有新功能、重构、依赖升级和发布构建。  
+> 适用范围：ZaYuCursorHalo 的所有新功能、重构、依赖升级和发布构建。  
 > 原则：**Windows 7 SP1 x86 是第一目标；兼容性不是发布前补丁，而是功能准入条件。**
 
 ## 1. 不可协商的基线
@@ -84,7 +84,7 @@ scripts\build-win7-x86.cmd
 它会在复制 exe 后自动运行：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\CursorHalo.exe
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\ZaYuCursorHalo.exe
 ```
 
 检查内容：
@@ -97,7 +97,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps
 手动运行检查：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\CursorHalo.exe
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-win7-compat.ps1 -Exe dist\ZaYuCursorHalo.exe
 ```
 
 ## 6. 发布前 Win7 回归清单

@@ -1,13 +1,13 @@
-# CursorHalo v0.3.0
+# ZaYuCursorHalo v0.3.0
 
 Windows 7 SP1 x86 优先的原生桌面鼠标高亮 / 键盘显示 / 浮动计时器工具。
 
 ## 下载
 
-发布资产：`CursorHalo-v0.3.0-win7-x86.zip`
+发布资产：`ZaYuCursorHalo-v0.3.0-win7-x86.zip`
 
-- SHA256: `4FC84C2964C7C2DDFB1452155351CC03825C82B0466C9818C6B4D9E9D4B3EC9E`
-- 解压后直接运行 `CursorHalo.exe`，无需安装。
+- SHA256: `B257A81EF9126D07A939DC6E140F3848C589161306C414E127F0B7C7EE18D43F`
+- 解压后直接运行 `ZaYuCursorHalo.exe`，无需安装。
 - 无 .NET / Electron / WebView2 / Qt / VC++ Redistributable 依赖。
 - 普通用户权限运行，不安装服务或驱动。
 

@@ -33,9 +33,9 @@ constexpr UINT kBenchmarkTimerId = 1;
 constexpr UINT kSaveTimerId = 2;
 constexpr UINT kFirstRunMessage = WM_APP + 41;
 constexpr UINT kKeyPlacementMessage = WM_APP + 42;
-constexpr wchar_t kMainClass[] = L"CursorHalo.Main.P0";
-constexpr wchar_t kMutexName[] = L"Local\\CursorHalo.P0.Singleton";
-constexpr wchar_t kAppTitle[] = L"CursorHalo";
+constexpr wchar_t kMainClass[] = L"ZaYuCursorHalo.Main.P0";
+constexpr wchar_t kMutexName[] = L"Local\\ZaYuCursorHalo.P0.Singleton";
+constexpr wchar_t kAppTitle[] = L"ZaYuCursorHalo";
 constexpr wchar_t kAppVersion[] = L"0.3.0-p1";
 
 UINT g_taskbarCreatedMessage = 0;
@@ -152,7 +152,7 @@ Options ParseOptions()
 
 std::wstring TrayTooltip(bool enabled, const std::wstring& hotkey)
 {
-    return std::wstring(L"CursorHalo · ") + (enabled ? L"高亮已开启" : L"高亮已暂停") + L" · " + hotkey;
+    return std::wstring(L"ZaYuCursorHalo · ") + (enabled ? L"高亮已开启" : L"高亮已暂停") + L" · " + hotkey;
 }
 
 void WriteStartupError(const std::wstring& path, const wchar_t* message)
@@ -164,7 +164,7 @@ void WriteStartupError(const std::wstring& path, const wchar_t* message)
     FILE* file = nullptr;
     if (_wfopen_s(&file, path.c_str(), L"wb") == 0 && file)
     {
-        std::fprintf(file, "CursorHalo P0 startup error\nmessage=%ls\n", message);
+        std::fprintf(file, "ZaYuCursorHalo P0 startup error\nmessage=%ls\n", message);
         std::fclose(file);
     }
 }
@@ -1081,14 +1081,14 @@ private:
         if (context_.benchmark.load() && !context_.statsPath.empty())
             WriteStartupError(context_.statsPath, message);
         else
-            MessageBoxW(nullptr, message, L"CursorHalo", MB_OK | MB_ICONERROR);
+            MessageBoxW(nullptr, message, L"ZaYuCursorHalo", MB_OK | MB_ICONERROR);
     }
 
     void ReportWarning(const wchar_t* message) const
     {
         if (context_.benchmark.load() && !context_.statsPath.empty())
             return;
-        MessageBoxW(nullptr, message, L"CursorHalo", MB_OK | MB_ICONWARNING);
+        MessageBoxW(nullptr, message, L"ZaYuCursorHalo", MB_OK | MB_ICONWARNING);
     }
 
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1305,7 +1305,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     HANDLE instanceMutex = CreateMutexW(nullptr, FALSE, kMutexName);
     if (instanceMutex && GetLastError() == ERROR_ALREADY_EXISTS)
     {
-        MessageBoxW(nullptr, L"CursorHalo 已在运行。", L"CursorHalo", MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(nullptr, L"ZaYuCursorHalo 已在运行。", L"ZaYuCursorHalo", MB_OK | MB_ICONINFORMATION);
         CloseHandle(instanceMutex);
         return 0;
     }

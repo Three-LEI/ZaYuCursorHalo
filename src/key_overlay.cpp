@@ -6,8 +6,8 @@
 
 namespace
 {
-constexpr wchar_t kOverlayClass[] = L"CursorHalo.KeyOverlay.P1";
-constexpr wchar_t kCatcherClass[] = L"CursorHalo.KeyPlacementCatcher.P1";
+constexpr wchar_t kOverlayClass[] = L"ZaYuCursorHalo.KeyOverlay.P1";
+constexpr wchar_t kCatcherClass[] = L"ZaYuCursorHalo.KeyPlacementCatcher.P1";
 constexpr float kCapHeight = 40.0f;
 constexpr float kPlusGap = 8.0f;
 constexpr float kPlusSize = 12.0f;

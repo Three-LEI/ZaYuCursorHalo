@@ -7,7 +7,7 @@
 
 ## 交付物
 
-- 可执行文件：[`dist/CursorHalo.exe`](../dist/CursorHalo.exe)
+- 可执行文件：[`dist/ZaYuCursorHalo.exe`](../dist/ZaYuCursorHalo.exe)
 - 实际桌面截图（165 Hz、125% 缩放、物理 2560×1440）：  
   ![P0 overlay](../artifacts/p0-screen-final.png)
 - 任务栏下方行为截图：  

@@ -8,7 +8,7 @@
 
 namespace
 {
-constexpr wchar_t kOverlayClass[] = L"CursorHalo.Overlay.P0";
+constexpr wchar_t kOverlayClass[] = L"ZaYuCursorHalo.Overlay.P0";
 constexpr double kIdleThresholdSeconds = 0.35;
 
 using GetDpiForMonitorFn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
@@ -262,7 +262,7 @@ bool Overlay::CreateOverlayWindow()
     hwnd_ = CreateWindowExW(
         exStyle,
         kOverlayClass,
-        L"CursorHalo overlay",
+        L"ZaYuCursorHalo overlay",
         WS_POPUP,
         0,
         0,

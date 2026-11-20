@@ -7,14 +7,14 @@
 
 在 GitHub 新建一个空仓库（不要勾选 README/LICENSE），例如：
 
-- Name: `CursorHalo`
+- Name: `ZaYuCursorHalo`
 - Description: `Win7-friendly native mouse highlight, key display and floating timer`
 - Topics: `windows-7`, `win32`, `direct2d`, `mouse-highlight`, `keyboard-visualizer`
 
 ## 2. 配置 remote 并推送
 
 ```powershell
-git remote add origin https://github.com/<your-name>/CursorHalo.git
+git remote add origin https://github.com/<your-name>/ZaYuCursorHalo.git
 git push -u origin main
 git push origin v0.3.0
 ```
@@ -22,9 +22,9 @@ git push origin v0.3.0
 ## 3. 上传 Release 资产
 
 - Tag: `v0.3.0`
-- Title: `CursorHalo v0.3.0`
+- Title: `ZaYuCursorHalo v0.3.0`
 - Body: 粘贴 [`RELEASE_NOTES_v0.3.0.md`](../RELEASE_NOTES_v0.3.0.md)
-- Asset: `release/CursorHalo-v0.3.0-win7-x86.zip`
+- Asset: `release/ZaYuCursorHalo-v0.3.0-win7-x86.zip`
 - SHA256: 见 [`RELEASE_NOTES_v0.3.0.md`](../RELEASE_NOTES_v0.3.0.md)（发布时以实际文件哈希为准）
 
 `release/` 不会进入 git（已忽略），只作为 Release 附件上传。
@@ -42,5 +42,5 @@ git push origin v0.3.0
 
 ```powershell
 scripts\build-win7-x86.cmd
-tools\p0-smoke.ps1 -Exe dist\CursorHalo.exe
+tools\p0-smoke.ps1 -Exe dist\ZaYuCursorHalo.exe
 ```

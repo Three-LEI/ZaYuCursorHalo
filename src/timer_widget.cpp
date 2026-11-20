@@ -24,7 +24,7 @@ using std::min;
 
 namespace
 {
-constexpr wchar_t kTimerClass[] = L"CursorHalo.TimerWidget.P2";
+constexpr wchar_t kTimerClass[] = L"ZaYuCursorHalo.TimerWidget.P2";
 constexpr UINT_PTR kTimerId = 1;
 constexpr UINT kTimerIntervalMs = 100;
 

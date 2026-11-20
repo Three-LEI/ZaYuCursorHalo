@@ -1,5 +1,5 @@
 param(
-    [string]$Exe = "dist\CursorHalo.exe"
+    [string]$Exe = "dist\ZaYuCursorHalo.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,7 +38,7 @@ public static class P0Native
         {
             var name = new StringBuilder(256);
             GetClassName(hWnd, name, name.Capacity);
-            if (name.ToString() == "CursorHalo.Overlay.P0")
+            if (name.ToString() == "ZaYuCursorHalo.Overlay.P0")
             {
                 result = hWnd;
                 return false;
@@ -103,14 +103,14 @@ function Get-CpuSeconds($process) {
     $process.TotalProcessorTime.TotalSeconds
 }
 
-Get-Process CursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process ZaYuCursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 400
 
 $app = Start-Process -FilePath $exePath -PassThru
 try {
     Start-Sleep -Milliseconds 900
     if ($app.HasExited) {
-        throw "CursorHalo exited during startup with code $($app.ExitCode)"
+        throw "ZaYuCursorHalo exited during startup with code $($app.ExitCode)"
     }
 
     $overlay = Wait-Overlay $true 3000
@@ -165,5 +165,5 @@ try {
     Write-Host "foreground_after_hotkey: $([P0Native]::Describe([P0Native]::GetForegroundWindow()))"
 }
 finally {
-    Get-Process CursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process ZaYuCursorHalo -ErrorAction SilentlyContinue | Stop-Process -Force
 }
