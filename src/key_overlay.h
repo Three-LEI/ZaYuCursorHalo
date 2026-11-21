@@ -75,6 +75,7 @@ private:
         ULONGLONG hideAt = 0;
         ULONGLONG appearAt = 0;
         ULONGLONG exitAt = 0;
+        ULONGLONG collapseAt = 0;
     };
 
     struct RowView
@@ -82,6 +83,7 @@ private:
         const std::vector<std::wstring>* labels = nullptr;
         ULONGLONG appearAt = 0;
         ULONGLONG exitAt = 0;
+        ULONGLONG collapseAt = 0;
     };
 
     static constexpr UINT kKeyMessage = WM_APP + 51;
@@ -180,6 +182,9 @@ private:
     std::vector<UINT> physicalKeys_;
     std::vector<UINT> latchedKeys_;
     UINT snapshotTrigger_ = 0;
+    POINT followAnchor_ = {};
+    bool followAnchorValid_ = false;
+    UINT sessionHeightPx_ = 0;
     std::vector<std::wstring> labels_;
     ULONGLONG labelsStartedAt_ = 0;
     std::vector<HistoryRow> history_;

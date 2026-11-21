@@ -18,6 +18,13 @@
 - Custom-position placement now shows a translucent keyboard ghost for previewing.
 - Key stack display with independent delay and enter/exit slide/fade animations.
 - Floating timer: count-up/countdown, custom 1–99 minutes, segments and last split.
+- Mouse trail is now independent of the halo master switch and works while highlighting is disabled.
+- Added a dedicated Trail settings page with length, lifetime, smoothing, width, opacity, glow, and automatic/custom color.
+- Trail endpoint fades out smoothly, follows at ~60 FPS, and has dedicated plus all-settings reset buttons.
+- Follow-cursor key display now captures the cursor position once, stays below it, and exits stack rows upward without side flipping.
+- Stack rows collapse their layout height while exiting, so the next row moves up continuously instead of jumping a full row.
+- Stack window height is fixed for the display session, preventing bottom-center rows from simultaneously moving down with the window and up during collapse.
+- Stack exits use two phases per row: downward fade, then an empty-slot collapse that moves the next row up; only then does that next row begin its own downward fade.
 - Mouse trail, left/right click ripples and ten click-sound presets.
 - WAV/MP3 click sound import; MP3 is decoded locally to PCM WAV.
 - Tray panel, settings window, hotkey recording, theme and start-with-Windows.

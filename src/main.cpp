@@ -233,6 +233,7 @@ private:
         settings_.theme = FormatThemeMode(themeMode_);
         darkMode_ = ResolveDarkTheme(themeMode_);
         context_.enabled.store(settings_.enabled);
+        ApplyTrailSettings();
         context_.radiusDip.store(settings_.radiusDip);
         context_.opacityPercent.store(settings_.opacityPercent);
         context_.accentRgb.store(settings_.accentRgb);
@@ -869,9 +870,22 @@ private:
         QueueSettingsSave();
     }
 
-    void OnTrayPanelTrailChanged(bool enabled) override
+    void ApplyTrailSettings()
+    {
+        context_.trailLengthPercent.store(settings_.trailLengthPercent);
+        context_.trailLifetimeMs.store(settings_.trailLifetimeMs);
+        context_.trailSmoothness.store(settings_.trailSmoothness);
+        context_.trailWidthPercent.store(settings_.trailWidthPercent);
+        context_.trailOpacityPercent.store(settings_.trailOpacityPercent);
+        context_.trailGlowPercent.store(settings_.trailGlowPercent);
+        context_.trailColorAuto.store(settings_.trailColorAuto);
+        context_.trailColorRgb.store(settings_.trailColorRgb);
+    }
+
+    void ApplyTrailEnabled(bool enabled)
     {
         settings_.trailEnabled = enabled;
+        ApplyTrailSettings();
         if (enabled)
             trailOverlay_.Start(&context_);
         else
@@ -883,7 +897,14 @@ private:
                 settings_.trailEnabled,
                 settings_.clickRippleEnabled,
                 settings_.clickSoundEnabled);
+        if (settingsWindow_.IsVisible())
+            settingsWindow_.Refresh();
         QueueSettingsSave();
+    }
+
+    void OnTrayPanelTrailChanged(bool enabled) override
+    {
+        ApplyTrailEnabled(enabled);
     }
 
     void OnTrayPanelClickRippleChanged(bool enabled) override
@@ -969,6 +990,51 @@ private:
                 settings_.trailEnabled,
                 settings_.clickRippleEnabled,
                 settings_.clickSoundEnabled);
+        QueueSettingsSave();
+    }
+
+    void OnSettingsTrailChanged(bool enabled) override
+    {
+        ApplyTrailEnabled(enabled);
+    }
+
+    void OnSettingsTrailSettingsChanged() override
+    {
+        ApplyTrailSettings();
+        if (settingsWindow_.IsVisible())
+            settingsWindow_.Refresh();
+        QueueSettingsSave();
+    }
+
+    void OnSettingsResetAll() override
+    {
+        settings_.firstRun = false;
+
+        // Re-apply every runtime component after the settings object has been
+        // reset to AppSettings defaults.
+        if (hotkeyRegistered_)
+        {
+            UnregisterHotKey(hwnd_, kHotkeyId);
+            hotkeyRegistered_ = false;
+        }
+        HotkeyBinding defaults = DefaultHotkey();
+        if (TryRegisterHotkey(defaults))
+        {
+            hotkeyRegistered_ = true;
+            hotkeyBinding_ = defaults;
+            settings_.hotkey = FormatHotkey(defaults);
+        }
+
+        OnSettingsAutoStartChanged(settings_.startWithWindows);
+        SetEnabled(settings_.enabled);
+        OnSettingsStyleChanged();
+        OnSettingsKeyDisplayChanged();
+        OnSettingsTimerChanged();
+        OnSettingsClickChanged();
+        OnSettingsThemeChanged();
+        OnSettingsShowKeysChanged(settings_.showKeys);
+        OnSettingsTrailChanged(settings_.trailEnabled);
+        settingsWindow_.Refresh();
         QueueSettingsSave();
     }
 

@@ -26,6 +26,9 @@ public:
     virtual void CancelHotkeyRecording() = 0;
     virtual void OnSettingsThemeChanged() = 0;
     virtual void OnSettingsShowKeysChanged(bool enabled) = 0;
+    virtual void OnSettingsTrailChanged(bool enabled) = 0;
+    virtual void OnSettingsTrailSettingsChanged() = 0;
+    virtual void OnSettingsResetAll() = 0;
     virtual void OnSettingsKeyDisplayChanged() = 0;
     virtual void OnSettingsKeyPositionCustomRequested() = 0;
     virtual void OnSettingsTimerChanged() = 0;
@@ -60,7 +63,8 @@ private:
         Stack = 3,
         Timer = 4,
         Click = 5,
-        General = 6,
+        Trail = 6,
+        General = 7,
     };
 
     enum class SliderDrag
@@ -73,6 +77,12 @@ private:
         KeyOpacity,
         StackDelay,
         ClickVolume,
+        TrailLength,
+        TrailLifetime,
+        TrailSmoothness,
+        TrailWidth,
+        TrailOpacity,
+        TrailGlow,
     };
 
     enum class ColorDrag
@@ -88,9 +98,10 @@ private:
         NavHighlight,
         NavAppearance,
         NavKeys,
+        NavStack,
         NavTimer,
         NavClick,
-        NavStack,
+        NavTrail,
         NavGeneral,
         Enable,
         HaloStyleRing,
@@ -111,6 +122,18 @@ private:
         ThemeLight,
         ThemeDark,
         ShowKeys,
+        TrailEnabled,
+        TrailLength,
+        TrailLifetime,
+        TrailSmoothness,
+        TrailWidth,
+        TrailOpacity,
+        TrailGlow,
+        TrailColorAuto,
+        TrailColorCustom,
+        TrailColorSwatch,
+        TrailReset,
+        ResetAll,
         StackEnabled,
         StackDelay,
         SkinFill,
@@ -173,6 +196,7 @@ private:
         KeyBorder,
         ClickLeft,
         ClickRight,
+        Trail,
     };
 
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -201,6 +225,7 @@ private:
         const D2D1_RECT_F& track,
         const D2D1_COLOR_F& accent);
     void DrawStackPage(const D2D1_COLOR_F& accent);
+    void DrawTrailPage(const D2D1_COLOR_F& accent);
     void DrawSkinPage(const D2D1_COLOR_F& accent);
     void DrawGeneralPage(const D2D1_COLOR_F& accent);
     void DrawKeyPreviewCaps(const D2D1_COLOR_F& accent);
@@ -255,8 +280,13 @@ private:
     void SetKeyScale(int percent);
     void SetKeyOpacity(int percent);
     void SetClickVolume(int percent);
+    void SetTrailValue(int index, int value);
+    void SetTrailColorAuto(bool automatic);
+    void ResetTrailDefaults();
+    void ResetAllDefaults();
     void UpdateKeyDelayValue(float x);
     void UpdateClickVolumeValue(float x);
+    void UpdateTrailValue(int index, float x);
     void UpdateKeyScaleValue(float x);
     void UpdateKeyOpacityValue(float x);
     void UpdateStackDelayValue(float x);
@@ -291,6 +321,16 @@ private:
     D2D1_RECT_F ThemeChipRect(int index) const;
     D2D1_RECT_F ShowKeysRowRect() const;
     D2D1_RECT_F ShowKeysToggleRect() const;
+    D2D1_RECT_F TrailRowRect() const;
+    D2D1_RECT_F TrailToggleRect() const;
+    D2D1_RECT_F TrailEnableRect() const;
+    D2D1_RECT_F TrailEnableToggleRect() const;
+    D2D1_RECT_F TrailTrackRect(int index) const;
+    D2D1_RECT_F TrailColorAutoRect() const;
+    D2D1_RECT_F TrailColorCustomRect() const;
+    D2D1_RECT_F TrailColorSwatchRect() const;
+    D2D1_RECT_F TrailResetRect() const;
+    D2D1_RECT_F ResetAllRect() const;
     D2D1_RECT_F StackToggleRect() const;
     D2D1_RECT_F StackDelayTrackRect() const;
     D2D1_RECT_F SkinSwatchRect(int index) const;
@@ -345,6 +385,8 @@ private:
     bool colorBeforeKeyTextAuto_ = true;
     bool colorBeforeKeyStyleAuto_ = true;
     unsigned colorBeforeKeyTextRgb_ = 0xFFFFFF;
+    bool colorBeforeTrailAuto_ = true;
+    unsigned colorBeforeTrailRgb_ = 0x5B8DFF;
     float colorHue_ = 0.0f;
     float colorSaturation_ = 0.0f;
     float colorValue_ = 1.0f;

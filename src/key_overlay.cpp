@@ -18,6 +18,7 @@ constexpr float kBottomMargin = 28.0f;
 constexpr float kFadeMs = 180.0f;
 constexpr float kEnterMs = 140.0f;
 constexpr float kExitMs = 160.0f;
+constexpr float kCollapseMs = 140.0f;
 constexpr float kPlacementOpacity = 0.62f;
 constexpr UINT kTimerIntervalMs = 16;
 
@@ -307,6 +308,7 @@ void KeyOverlay::SetSuspended(bool suspended)
             {
                 row.appearAt = now;
                 row.exitAt = 0;
+                row.collapseAt = 0;
                 row.hideAt = now + static_cast<ULONGLONG>(stackDelayMs_);
             }
             Render();
@@ -543,6 +545,8 @@ void KeyOverlay::Configure(
 {
     const bool positionChanged =
         position_ != position || customX_ != customX || customY_ != customY;
+    const bool stackChanged = stackKeys_ != keyStack;
+    const float oldKeyScale = keyScale_;
     skin_ = skin;
     position_ = position;
     delayMs_ = ClampKeyDelay(delayMs);
@@ -571,7 +575,12 @@ void KeyOverlay::Configure(
     customX_ = customX;
     customY_ = customY;
     if (positionChanged)
+    {
         placementValid_ = false;
+        followAnchorValid_ = false;
+    }
+    if (positionChanged || stackChanged || keyScale_ != oldKeyScale)
+        sessionHeightPx_ = 0;
     if (visible_)
     {
         std::vector<std::wstring> labels;
@@ -903,22 +912,48 @@ bool KeyOverlay::PruneHistory(ULONGLONG now)
     bool changed = false;
     for (HistoryRow& row : history_)
     {
-        if (row.exitAt == 0 && row.hideAt != 0 && now >= row.hideAt)
+        if (row.exitAt != 0 && row.collapseAt == 0 &&
+            now >= row.exitAt + static_cast<ULONGLONG>(kExitMs))
         {
-            row.exitAt = now;
+            // Fade/slide is finished. The row is now invisible but keeps its
+            // layout slot briefly so the next row can move up before that
+            // next row starts its own exit animation.
+            row.collapseAt = now;
             changed = true;
         }
     }
+
     const size_t before = history_.size();
     history_.erase(
         std::remove_if(
             history_.begin(),
             history_.end(),
             [now](const HistoryRow& row) {
-                return row.exitAt != 0 &&
-                    now >= row.exitAt + static_cast<ULONGLONG>(kExitMs);
+                return row.collapseAt != 0 &&
+                    now >= row.collapseAt + static_cast<ULONGLONG>(kCollapseMs);
             }),
         history_.end());
+
+    const bool busy = std::any_of(
+        history_.begin(),
+        history_.end(),
+        [](const HistoryRow& row) {
+            return row.exitAt != 0 || row.collapseAt != 0;
+        });
+    if (!busy)
+    {
+        // One row at a time. The next row starts only after the previous
+        // row's slot has fully collapsed and the next row has moved up.
+        for (HistoryRow& row : history_)
+        {
+            if (row.hideAt != 0 && now >= row.hideAt)
+            {
+                row.exitAt = now;
+                changed = true;
+                break;
+            }
+        }
+    }
     return changed || history_.size() != before;
 }
 
@@ -1331,14 +1366,14 @@ void KeyOverlay::Render()
     if (placementMode_)
     {
         if (!labels_.empty())
-            rows.push_back({&labels_, now - static_cast<ULONGLONG>(kEnterMs), 0});
+            rows.push_back({&labels_, now - static_cast<ULONGLONG>(kEnterMs), 0, 0});
     }
     else
     {
         for (const HistoryRow& row : history_)
-            rows.push_back({&row.labels, row.appearAt, row.exitAt});
+            rows.push_back({&row.labels, row.appearAt, row.exitAt, row.collapseAt});
         if (!labels_.empty())
-            rows.push_back({&labels_, labelsStartedAt_, 0});
+            rows.push_back({&labels_, labelsStartedAt_, 0, 0});
     }
     if (rows.empty() || !EnsurePlacement())
         return;
@@ -1349,9 +1384,12 @@ void KeyOverlay::Render()
         std::vector<float> widths;
         float width = 0.0f;
         float alpha = 1.0f;
+        float exit = 0.0f;
+        float slotRemaining = 1.0f;
         float offsetY = 0.0f;
     };
 
+    constexpr float kRowGap = 8.0f;
     const float scale = placement_.scale;
     const float separator = kPlusGap * 2.0f + kPlusSize;
     std::vector<MeasuredRow> measured;
@@ -1372,7 +1410,20 @@ void KeyOverlay::Render()
                 (std::min)(1.0, static_cast<double>(now - view.exitAt) / static_cast<double>(kExitMs)));
             exit = exit * exit * (3.0f - 2.0f * exit);
         }
+        float collapse = 0.0f;
+        if (view.collapseAt != 0)
+        {
+            collapse = static_cast<float>(
+                (std::min)(1.0, static_cast<double>(now - view.collapseAt) /
+                    static_cast<double>(kCollapseMs)));
+            collapse = collapse * collapse * (3.0f - 2.0f * collapse);
+        }
+        item.exit = exit;
+        item.slotRemaining = 1.0f - collapse;
         item.alpha = (std::max)(0.0f, enter * (1.0f - exit));
+        // The row slides down and fades first. Only after it is fully gone
+        // does its empty slot collapse, moving the next row up before that
+        // row is allowed to start its own exit.
         item.offsetY = (1.0f - enter) * 8.0f + exit * 8.0f;
         float rowWidth = 0.0f;
         for (const std::wstring& label : *view.labels)
@@ -1405,15 +1456,27 @@ void KeyOverlay::Render()
 
     const bool placement = placementMode_;
     const float hintHeight = placement ? 18.0f : 0.0f;
-    constexpr float kRowGap = 8.0f;
+    float contentHeight = 0.0f;
+    for (size_t i = 0; i < measured.size(); ++i)
+    {
+        const float remaining = measured[i].slotRemaining;
+        contentHeight += kCapHeight * remaining;
+        if (i + 1 < measured.size())
+            contentHeight += kRowGap * remaining;
+    }
     const float baseWindowWidth = maxWidth + kMargin * 2.0f;
     const float windowWidthDip = baseWindowWidth * keyScale_;
     const float windowHeightDip =
-        (kCapHeight * static_cast<float>(measured.size()) +
-         kRowGap * static_cast<float>(measured.size() - 1) +
-         kMargin * 2.0f + hintHeight) * keyScale_;
+        (contentHeight + kMargin * 2.0f + hintHeight) * keyScale_;
     const UINT pixelWidth = (std::max)(1L, std::lround(windowWidthDip * scale));
-    const UINT pixelHeight = (std::max)(1L, std::lround(windowHeightDip * scale));
+    const UINT contentPixelHeight =
+        (std::max)(1L, std::lround(windowHeightDip * scale));
+    if (contentPixelHeight > sessionHeightPx_)
+        sessionHeightPx_ = contentPixelHeight;
+    // Keep the window height fixed while rows collapse. Otherwise a bottom-
+    // anchored window moves its top downward at the same time as the rows
+    // move upward, producing a second, opposite animation.
+    const UINT pixelHeight = sessionHeightPx_;
     if (!EnsureSurface(pixelWidth, pixelHeight, placement_.dpi))
         return;
 
@@ -1465,28 +1528,30 @@ void KeyOverlay::Render()
         renderTarget_->CreateLayer(rowLayer_.GetAddressOf());
 
     float top = kMargin + hintHeight;
-    for (const MeasuredRow& row : measured)
+    for (size_t i = 0; i < measured.size(); ++i)
     {
-        if (row.alpha <= 0.01f)
+        const MeasuredRow& row = measured[i];
+        const float remaining = row.slotRemaining;
+        if (row.alpha > 0.01f)
         {
-            top += kCapHeight + kRowGap;
-            continue;
+            const float left = kMargin + (maxWidth - row.width) / 2.0f;
+            const float drawTop = top + row.offsetY;
+            if (rowLayer_ && row.alpha < 0.995f)
+            {
+                D2D1_LAYER_PARAMETERS parameters = D2D1::LayerParameters();
+                parameters.opacity = row.alpha;
+                renderTarget_->PushLayer(parameters, rowLayer_.Get());
+                DrawRow(*row.row.labels, row.widths, left, drawTop, keyTextColor, accent);
+                renderTarget_->PopLayer();
+            }
+            else
+            {
+                DrawRow(*row.row.labels, row.widths, left, drawTop, keyTextColor, accent);
+            }
         }
-        const float left = kMargin + (maxWidth - row.width) / 2.0f;
-        const float drawTop = top + row.offsetY;
-        if (rowLayer_ && row.alpha < 0.995f)
-        {
-            D2D1_LAYER_PARAMETERS parameters = D2D1::LayerParameters();
-            parameters.opacity = row.alpha;
-            renderTarget_->PushLayer(parameters, rowLayer_.Get());
-            DrawRow(*row.row.labels, row.widths, left, drawTop, keyTextColor, accent);
-            renderTarget_->PopLayer();
-        }
-        else
-        {
-            DrawRow(*row.row.labels, row.widths, left, drawTop, keyTextColor, accent);
-        }
-        top += kCapHeight + kRowGap;
+        top += kCapHeight * remaining;
+        if (i + 1 < measured.size())
+            top += kRowGap * remaining;
     }
 
     const HRESULT endHr = renderTarget_->EndDraw();
@@ -1515,13 +1580,14 @@ void KeyOverlay::Render()
     }
     else if (position_ == KeyPosition::FollowCursor)
     {
-        POINT cursor = {};
-        GetCursorPos(&cursor);
+        if (!followAnchorValid_)
+        {
+            GetCursorPos(&followAnchor_);
+            followAnchorValid_ = true;
+        }
         const int offset = static_cast<int>(std::lround(24.0f * scale));
-        destX_ = cursor.x - widthPx / 2;
-        destY_ = cursor.y + offset;
-        if (destY_ + heightPx > placement_.work.bottom - margin)
-            destY_ = cursor.y - heightPx - offset;
+        destX_ = followAnchor_.x - widthPx / 2;
+        destY_ = followAnchor_.y + offset;
     }
     else if (position_ == KeyPosition::Custom)
     {
@@ -1529,17 +1595,20 @@ void KeyOverlay::Render()
         destY_ = customY_ - heightPx / 2;
     }
 
-    const int edge = static_cast<int>(std::lround(8.0f * scale));
-    const int maxLeft = placement_.work.right - widthPx - edge;
-    if (destX_ > maxLeft)
-        destX_ = maxLeft;
-    if (destX_ < placement_.work.left + edge)
-        destX_ = placement_.work.left + edge;
-    const int maxTop = placement_.work.bottom - heightPx - edge;
-    if (destY_ > maxTop)
-        destY_ = maxTop;
-    if (destY_ < placement_.work.top + edge)
-        destY_ = placement_.work.top + edge;
+    if (position_ != KeyPosition::FollowCursor)
+    {
+        const int edge = static_cast<int>(std::lround(8.0f * scale));
+        const int maxLeft = placement_.work.right - widthPx - edge;
+        if (destX_ > maxLeft)
+            destX_ = maxLeft;
+        if (destX_ < placement_.work.left + edge)
+            destX_ = placement_.work.left + edge;
+        const int maxTop = placement_.work.bottom - heightPx - edge;
+        if (destY_ > maxTop)
+            destY_ = maxTop;
+        if (destY_ < placement_.work.top + edge)
+            destY_ = placement_.work.top + edge;
+    }
 
     Present(placement ? kPlacementOpacity : 1.0f);
 }
@@ -1560,7 +1629,8 @@ bool KeyOverlay::Present(float opacity)
         return false;
     }
 
-    const int exitOffset = opacity < 0.999f
+    const int exitOffset =
+        (opacity < 0.999f && !placementMode_)
         ? static_cast<int>(std::lround((1.0f - opacity) * 8.0f * placement_.scale))
         : 0;
     POINT destination = {destX_, destY_ + exitOffset};
@@ -1626,7 +1696,7 @@ void KeyOverlay::OnTimer()
     const auto animating = [&]() {
         for (const HistoryRow& row : history_)
         {
-            if (row.exitAt != 0 ||
+            if (row.exitAt != 0 || row.collapseAt != 0 ||
                 now - row.appearAt < static_cast<ULONGLONG>(kEnterMs))
             {
                 return true;
@@ -1711,12 +1781,15 @@ void KeyOverlay::HideForSuspend()
     physicalKeys_.clear();
     latchedKeys_.clear();
     snapshotTrigger_ = 0;
+    followAnchorValid_ = false;
+    sessionHeightPx_ = 0;
     labelsStale_ = false;
     labelsStartedAt_ = NowMs();
     for (HistoryRow& row : history_)
     {
         row.appearAt = labelsStartedAt_;
         row.exitAt = 0;
+        row.collapseAt = 0;
         row.hideAt = labelsStartedAt_ + static_cast<ULONGLONG>(stackDelayMs_);
     }
     opacity_ = 1.0f;
@@ -1733,6 +1806,8 @@ void KeyOverlay::HideNow()
     physicalKeys_.clear();
     latchedKeys_.clear();
     snapshotTrigger_ = 0;
+    followAnchorValid_ = false;
+    sessionHeightPx_ = 0;
     labels_.clear();
     labelsStartedAt_ = 0;
     labelsStale_ = false;

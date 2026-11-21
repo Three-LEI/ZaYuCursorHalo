@@ -55,25 +55,27 @@ constexpr float kHexCellsLeft = 164.0f;
 constexpr float kHexCellWidth = 16.5f;
 constexpr float kHexCellTop = kModalTop + 210.0f;
 constexpr float kHexCellBottom = kModalTop + 230.0f;
-constexpr int kPageCount = 7;
-const wchar_t* kNavLabels[7] = {
-    L"高亮", L"外观", L"按键", L"堆叠", L"计时", L"点击", L"通用"};
-const wchar_t* kPageTitles[7] = {
+constexpr int kPageCount = 8;
+const wchar_t* kNavLabels[8] = {
+    L"高亮", L"外观", L"按键", L"堆叠", L"计时", L"点击", L"拖尾", L"通用"};
+const wchar_t* kPageTitles[8] = {
     L"鼠标高亮",
     L"外观",
     L"按键显示",
     L"按键堆叠",
     L"计时器",
     L"点击反馈",
+    L"鼠标拖尾",
     L"通用",
 };
-const wchar_t* kPageSubtitles[7] = {
+const wchar_t* kPageSubtitles[8] = {
     L"让指针在屏幕里更清晰",
     L"选择一个适合当前场景的光环颜色",
     L"键帽皮肤、位置与过滤规则",
     L"最近快捷键逐条堆叠、逐条消失",
     L"浮动时间码、拖动位置与计时行为",
     L"左键/右键波纹颜色与点击音效",
+    L"独立于高亮，调整长度、平滑度与颜色",
     L"启动方式与快捷键",
 };
 
@@ -514,6 +516,94 @@ void SettingsWindow::SetKeyOpacity(int percent)
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+void SettingsWindow::SetTrailValue(int index, int value)
+{
+    if (!settings_)
+        return;
+    int* field = nullptr;
+    int minimum = 0;
+    int maximum = 100;
+    switch (index)
+    {
+    case 0: field = &settings_->trailLengthPercent; minimum = 50; maximum = 200; break;
+    case 1: field = &settings_->trailLifetimeMs; minimum = 100; maximum = 1200; break;
+    case 2: field = &settings_->trailSmoothness; minimum = 0; maximum = 100; break;
+    case 3: field = &settings_->trailWidthPercent; minimum = 50; maximum = 200; break;
+    case 4: field = &settings_->trailOpacityPercent; minimum = 10; maximum = 100; break;
+    case 5: field = &settings_->trailGlowPercent; minimum = 0; maximum = 100; break;
+    default: return;
+    }
+    const int clamped = (std::max)(minimum, (std::min)(maximum, value));
+    if (*field == clamped)
+        return;
+    *field = clamped;
+    if (host_)
+        host_->OnSettingsTrailSettingsChanged();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::SetTrailColorAuto(bool automatic)
+{
+    if (!settings_ || settings_->trailColorAuto == automatic)
+        return;
+    const bool wasAutomatic = settings_->trailColorAuto;
+    settings_->trailColorAuto = automatic;
+    if (!automatic && wasAutomatic)
+        settings_->trailColorRgb = settings_->accentRgb;
+    if (host_)
+        host_->OnSettingsTrailSettingsChanged();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::ResetTrailDefaults()
+{
+    if (!settings_)
+        return;
+    settings_->trailEnabled = false;
+    settings_->trailLengthPercent = 100;
+    settings_->trailLifetimeMs = 320;
+    settings_->trailSmoothness = 70;
+    settings_->trailWidthPercent = 100;
+    settings_->trailOpacityPercent = 100;
+    settings_->trailGlowPercent = 60;
+    settings_->trailColorAuto = true;
+    settings_->trailColorRgb = 0x5B8DFF;
+    if (host_)
+        host_->OnSettingsTrailChanged(false);
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::ResetAllDefaults()
+{
+    if (!settings_)
+        return;
+    AppSettings defaults;
+    defaults.firstRun = false;
+    *settings_ = defaults;
+    if (host_)
+        host_->OnSettingsResetAll();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsWindow::UpdateTrailValue(int index, float x)
+{
+    const D2D1_RECT_F track = TrailTrackRect(index);
+    const float fraction = Clamp01((x - track.left) / (track.right - track.left));
+    int minimum = 0;
+    int maximum = 100;
+    switch (index)
+    {
+    case 0: minimum = 50; maximum = 200; break;
+    case 1: minimum = 100; maximum = 1200; break;
+    case 3: minimum = 50; maximum = 200; break;
+    case 4: minimum = 10; maximum = 100; break;
+    default: break;
+    }
+    SetTrailValue(
+        index,
+        minimum + static_cast<int>(std::lround(fraction * static_cast<float>(maximum - minimum))));
+}
+
 void SettingsWindow::SetClickVolume(int percent)
 {
     if (!settings_)
@@ -603,6 +693,7 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         FocusId::NavStack,
         FocusId::NavTimer,
         FocusId::NavClick,
+        FocusId::NavTrail,
         FocusId::NavGeneral,
     };
     if (page_ == Page::Highlight)
@@ -656,6 +747,20 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::ClickPresetSynth);
         order.push_back(FocusId::ClickImport);
     }
+    else if (page_ == Page::Trail)
+    {
+        order.push_back(FocusId::TrailEnabled);
+        order.push_back(FocusId::TrailLength);
+        order.push_back(FocusId::TrailLifetime);
+        order.push_back(FocusId::TrailSmoothness);
+        order.push_back(FocusId::TrailWidth);
+        order.push_back(FocusId::TrailOpacity);
+        order.push_back(FocusId::TrailGlow);
+        order.push_back(FocusId::TrailColorAuto);
+        order.push_back(FocusId::TrailColorCustom);
+        order.push_back(FocusId::TrailColorSwatch);
+        order.push_back(FocusId::TrailReset);
+    }
     else if (page_ == Page::Stack)
     {
         order.push_back(FocusId::StackEnabled);
@@ -677,6 +782,8 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::ThemeLight);
         order.push_back(FocusId::ThemeDark);
         order.push_back(FocusId::ShowKeys);
+        order.push_back(FocusId::TrailEnabled);
+        order.push_back(FocusId::ResetAll);
     }
     order.push_back(FocusId::Close);
     return order;
@@ -951,6 +1058,78 @@ bool SettingsWindow::HandleFocusKey(WPARAM key)
         return true;
     }
 
+    const int trailSlider = [&]() -> int {
+        switch (focus_)
+        {
+        case FocusId::TrailLength: return 0;
+        case FocusId::TrailLifetime: return 1;
+        case FocusId::TrailSmoothness: return 2;
+        case FocusId::TrailWidth: return 3;
+        case FocusId::TrailOpacity: return 4;
+        case FocusId::TrailGlow: return 5;
+        default: return -1;
+        }
+    }();
+    if (trailSlider >= 0)
+    {
+        int minimum = 0;
+        int maximum = 100;
+        int step = 5;
+        switch (trailSlider)
+        {
+        case 1: minimum = 100; maximum = 1200; step = 20; break;
+        case 3: minimum = 50; maximum = 200; break;
+        case 4: minimum = 10; maximum = 100; break;
+        default: break;
+        }
+        int value = 0;
+        switch (trailSlider)
+        {
+        case 0: value = settings_->trailLengthPercent; break;
+        case 1: value = settings_->trailLifetimeMs; break;
+        case 2: value = settings_->trailSmoothness; break;
+        case 3: value = settings_->trailWidthPercent; break;
+        case 4: value = settings_->trailOpacityPercent; break;
+        case 5: value = settings_->trailGlowPercent; break;
+        }
+        if (key == VK_LEFT || key == VK_DOWN)
+            value -= step;
+        else if (key == VK_RIGHT || key == VK_UP)
+            value += step;
+        else if (key == VK_PRIOR)
+            value += step * 2;
+        else if (key == VK_NEXT)
+            value -= step * 2;
+        else if (key == VK_HOME)
+            value = minimum;
+        else if (key == VK_END)
+            value = maximum;
+        else
+            return false;
+        SetTrailValue(trailSlider, value);
+        return true;
+    }
+
+    if (focus_ == FocusId::TrailColorAuto ||
+        focus_ == FocusId::TrailColorCustom ||
+        focus_ == FocusId::TrailColorSwatch)
+    {
+        int index = focus_ == FocusId::TrailColorAuto ? 0 :
+            (focus_ == FocusId::TrailColorCustom ? 1 : 2);
+        if (key == VK_LEFT)
+            index = (index + 2) % 3;
+        else if (key == VK_RIGHT)
+            index = (index + 1) % 3;
+        else if (key == VK_HOME)
+            index = 0;
+        else if (key == VK_END)
+            index = 2;
+        else
+            return false;
+        SetFocusId(static_cast<FocusId>(static_cast<int>(FocusId::TrailColorAuto) + index));
+        return true;
+    }
+
     const int colorIndex = [&]() -> int {
         switch (focus_)
         {
@@ -1090,6 +1269,30 @@ void SettingsWindow::ActivateFocus()
         if (host_)
             host_->OnSettingsShowKeysChanged(settings_->showKeys);
         InvalidateRect(hwnd_, nullptr, FALSE);
+        break;
+    case FocusId::TrailEnabled:
+        settings_->trailEnabled = !settings_->trailEnabled;
+        if (host_)
+            host_->OnSettingsTrailChanged(settings_->trailEnabled);
+        InvalidateRect(hwnd_, nullptr, FALSE);
+        break;
+    case FocusId::TrailColorAuto:
+        SetTrailColorAuto(true);
+        break;
+    case FocusId::TrailColorCustom:
+    case FocusId::TrailColorSwatch:
+    {
+        const bool wasAutomatic = settings_->trailColorAuto;
+        OpenColorPicker(ColorTarget::Trail);
+        if (wasAutomatic)
+            SetTrailColorAuto(false);
+        break;
+    }
+    case FocusId::TrailReset:
+        ResetTrailDefaults();
+        break;
+    case FocusId::ResetAll:
+        ResetAllDefaults();
         break;
     case FocusId::StackEnabled:
         settings_->keyStack = !settings_->keyStack;
@@ -1319,6 +1522,39 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
     }
     case FocusId::ShowKeys:
         StrokeRounded(Rect(532.0f, 320.0f, 580.0f, 350.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::TrailEnabled:
+        if (page_ == Page::Trail)
+            StrokeRounded(Rect(516.0f, 90.0f, 564.0f, 120.0f), 8.0f, focusColor, 1.6f);
+        else
+            StrokeRounded(Rect(532.0f, 386.0f, 580.0f, 416.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::TrailReset:
+        StrokeRounded(Rect(184.0f, 488.0f, 312.0f, 520.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::ResetAll:
+        StrokeRounded(Rect(396.0f, 506.0f, 580.0f, 538.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::TrailLength:
+    case FocusId::TrailLifetime:
+    case FocusId::TrailSmoothness:
+    case FocusId::TrailWidth:
+    case FocusId::TrailOpacity:
+    case FocusId::TrailGlow:
+    {
+        const int index = static_cast<int>(focus_) - static_cast<int>(FocusId::TrailLength);
+        const float top = 142.0f + static_cast<float>(index) * 48.0f;
+        StrokeRounded(Rect(176.0f, top, 588.0f, top + 42.0f), 8.0f, focusColor, 1.6f);
+        break;
+    }
+    case FocusId::TrailColorAuto:
+        StrokeRounded(Rect(184.0f, 450.0f, 266.0f, 488.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::TrailColorCustom:
+        StrokeRounded(Rect(266.0f, 450.0f, 348.0f, 488.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::TrailColorSwatch:
+        StrokeRounded(Rect(348.0f, 450.0f, 388.0f, 488.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::StackEnabled:
         StrokeRounded(
@@ -1809,6 +2045,9 @@ void SettingsWindow::Draw()
     case Page::Stack:
         DrawStackPage(accent);
         break;
+    case Page::Trail:
+        DrawTrailPage(accent);
+        break;
     case Page::General:
         DrawGeneralPage(accent);
         break;
@@ -1863,7 +2102,7 @@ void SettingsWindow::DrawSidebar(const D2D1_COLOR_F& accent)
         }
 
         const D2D1_COLOR_F iconColor = active ? accent : palette_.muted;
-        const int iconCodes[7] = {0, 1, 2, 4, 3, 5, 7};
+        const int iconCodes[8] = {0, 1, 2, 4, 3, 5, 8, 7};
         DrawLineIcon(iconCodes[i], D2D1::Point2F(28.0f, rect.top + kNavH / 2.0f), iconColor);
         DrawTextBlock(
             kNavLabels[i],
@@ -2692,6 +2931,97 @@ void SettingsWindow::DrawTimerPage(const D2D1_COLOR_F& accent)
         palette_.subtle);
 }
 
+void SettingsWindow::DrawTrailPage(const D2D1_COLOR_F& accent)
+{
+    const D2D1_RECT_F enableCard = TrailEnableRect();
+    FillRounded(enableCard, 12.0f, palette_.surfaceAlt);
+    StrokeRounded(enableCard, 12.0f, palette_.border, 1.0f);
+    DrawTextBlock(
+        L"启用鼠标拖尾",
+        bodyStrongFormat_.Get(),
+        Rect(kContentX + 20.0f, 92.0f, 480.0f, 112.0f),
+        palette_.text);
+    DrawTextBlock(
+        L"独立于高亮，关闭光圈后也能使用",
+        captionFormat_.Get(),
+        Rect(kContentX + 20.0f, 110.0f, 500.0f, 126.0f),
+        palette_.muted);
+    DrawToggle(TrailEnableToggleRect(), settings_->trailEnabled, accent);
+
+    const wchar_t* labels[6] = {
+        L"拖尾长度",
+        L"停留时间",
+        L"曲线平滑度",
+        L"拖尾宽度",
+        L"不透明度",
+        L"发光强度",
+    };
+    std::wstring values[6] = {
+        std::to_wstring(settings_->trailLengthPercent) + L"%",
+        std::to_wstring(settings_->trailLifetimeMs) + L" ms",
+        std::to_wstring(settings_->trailSmoothness) + L"%",
+        std::to_wstring(settings_->trailWidthPercent) + L"%",
+        std::to_wstring(settings_->trailOpacityPercent) + L"%",
+        std::to_wstring(settings_->trailGlowPercent) + L"%",
+    };
+    int minimums[6] = {50, 100, 0, 50, 10, 0};
+    int maximums[6] = {200, 1200, 100, 200, 100, 100};
+    int current[6] = {
+        settings_->trailLengthPercent,
+        settings_->trailLifetimeMs,
+        settings_->trailSmoothness,
+        settings_->trailWidthPercent,
+        settings_->trailOpacityPercent,
+        settings_->trailGlowPercent,
+    };
+    for (int i = 0; i < 6; ++i)
+    {
+        const float labelY = 146.0f + static_cast<float>(i) * 48.0f;
+        const float trackY = 172.0f + static_cast<float>(i) * 48.0f;
+        const float fraction = static_cast<float>(current[i] - minimums[i]) /
+            static_cast<float>(maximums[i] - minimums[i]);
+        DrawSlider(labels[i], values[i], labelY, trackY, fraction, accent);
+    }
+
+    DrawTextBlock(L"拖尾颜色", bodyStrongFormat_.Get(), Rect(kContentX, 430.0f, 300.0f, 450.0f), palette_.text);
+    const bool automatic = settings_->trailColorAuto;
+    const D2D1_RECT_F autoChip = TrailColorAutoRect();
+    const D2D1_RECT_F customChip = TrailColorCustomRect();
+    FillRounded(autoChip, 8.0f, automatic ? Blend(palette_.surface, accent, 0.10f) : palette_.control);
+    StrokeRounded(autoChip, 8.0f, automatic ? accent : palette_.border, automatic ? 1.4f : 1.0f);
+    FillRounded(customChip, 8.0f, !automatic ? Blend(palette_.surface, accent, 0.10f) : palette_.control);
+    StrokeRounded(customChip, 8.0f, !automatic ? accent : palette_.border, !automatic ? 1.4f : 1.0f);
+    DrawTextBlock(L"自动", captionCenterFormat_.Get(), autoChip, automatic ? palette_.text : palette_.muted);
+    DrawTextBlock(L"自定义", captionCenterFormat_.Get(), customChip, !automatic ? palette_.text : palette_.muted);
+
+    const unsigned trailColor = automatic ? settings_->accentRgb : settings_->trailColorRgb;
+    const D2D1_RECT_F swatch = TrailColorSwatchRect();
+    FillRounded(swatch, 8.0f, Rgb(trailColor));
+    StrokeRounded(swatch, 8.0f, palette_.border, 1.0f);
+    const std::wstring hex = L"#" + FormatRgbHex(trailColor);
+    DrawTextBlock(hex.c_str(), captionFormat_.Get(), Rect(392.0f, 452.0f, 500.0f, 470.0f), palette_.muted);
+    DrawTextBlock(
+        automatic ? L"跟随高亮颜色" : L"自定义颜色",
+        captionFormat_.Get(),
+        Rect(392.0f, 470.0f, 540.0f, 490.0f),
+        palette_.subtle);
+
+    const D2D1_RECT_F reset = TrailResetRect();
+    FillRounded(reset, 7.0f, palette_.control);
+    StrokeRounded(reset, 7.0f, palette_.border, 1.0f);
+    DrawTextBlock(
+        L"重置拖尾设置",
+        captionCenterFormat_.Get(),
+        reset,
+        palette_.muted);
+
+    DrawTextBlock(
+        L"修改会立即应用并自动保存",
+        captionFormat_.Get(),
+        Rect(kContentX, kFooterY, kContentX + kContentW, kFooterY + 18.0f),
+        palette_.subtle);
+}
+
 void SettingsWindow::DrawClickPage(const D2D1_COLOR_F& accent)
 {
     const wchar_t* labels[2] = {L"左键波纹", L"右键波纹"};
@@ -3185,15 +3515,34 @@ void SettingsWindow::DrawGeneralPage(const D2D1_COLOR_F& accent)
 
     StrokeLine(kContentX, 372.0f, kContentX + kContentW, 372.0f, palette_.divider, 1.0f);
 
-    DrawTextBlock(L"版本", bodyStrongFormat_.Get(), Rect(kContentX, 390.0f, 400.0f, 412.0f), palette_.text);
-    DrawTextBlock(L"ZaYuCursorHalo 0.3.0", captionFormat_.Get(), Rect(kContentX, 408.0f, 500.0f, 426.0f), palette_.muted);
+    DrawTextBlock(L"鼠标拖尾", bodyStrongFormat_.Get(), Rect(kContentX, 386.0f, 470.0f, 408.0f), palette_.text);
+    DrawTextBlock(
+        L"独立于高亮，可单独开启使用",
+        captionFormat_.Get(),
+        Rect(kContentX, 408.0f, 500.0f, 426.0f),
+        palette_.muted);
+    DrawToggle(TrailToggleRect(), settings_->trailEnabled, accent);
+
+    StrokeLine(kContentX, 440.0f, kContentX + kContentW, 440.0f, palette_.divider, 1.0f);
+
+    DrawTextBlock(L"版本", bodyStrongFormat_.Get(), Rect(kContentX, 454.0f, 400.0f, 476.0f), palette_.text);
+    DrawTextBlock(L"ZaYuCursorHalo 0.3.0", captionFormat_.Get(), Rect(kContentX, 472.0f, 500.0f, 490.0f), palette_.muted);
     DrawTextBlock(
         L"three-lei × DeepSeek",
         captionFormat_.Get(),
-        Rect(kContentX, 426.0f, 500.0f, 444.0f),
+        Rect(kContentX, 490.0f, 500.0f, 508.0f),
         palette_.subtle);
 
-    DrawTextBlock(L"设置会自动保存在当前用户目录", captionFormat_.Get(), Rect(kContentX, kFooterY, kContentX + kContentW, kFooterY + 18.0f), palette_.subtle);
+    const D2D1_RECT_F resetAll = ResetAllRect();
+    FillRounded(resetAll, 7.0f, palette_.control);
+    StrokeRounded(resetAll, 7.0f, palette_.border, 1.0f);
+    DrawTextBlock(
+        L"重置所有选项",
+        captionCenterFormat_.Get(),
+        resetAll,
+        palette_.muted);
+
+    DrawTextBlock(L"设置会自动保存在当前用户目录", captionFormat_.Get(), Rect(kContentX, 540.0f, kContentX + kContentW, 558.0f), palette_.subtle);
 }
 
 void SettingsWindow::DrawCloseButton()
@@ -3239,6 +3588,7 @@ void SettingsWindow::DrawColorPicker()
     case ColorTarget::KeyBorder: pickerTitle = L"键帽边框颜色"; break;
     case ColorTarget::ClickLeft: pickerTitle = L"左键波纹颜色"; break;
     case ColorTarget::ClickRight: pickerTitle = L"右键波纹颜色"; break;
+    case ColorTarget::Trail: pickerTitle = L"鼠标拖尾颜色"; break;
     default: break;
     }
     DrawTextBlock(
@@ -3561,6 +3911,29 @@ void SettingsWindow::DrawLineIcon(int icon, D2D1_POINT_2F center, const D2D1_COL
         return;
     }
 
+    if (icon == 8)
+    {
+        const D2D1_POINT_2F points[5] = {
+            D2D1::Point2F(center.x - 8.0f, center.y + 5.0f),
+            D2D1::Point2F(center.x - 4.0f, center.y - 4.0f),
+            D2D1::Point2F(center.x, center.y + 3.0f),
+            D2D1::Point2F(center.x + 4.0f, center.y - 5.0f),
+            D2D1::Point2F(center.x + 8.0f, center.y + 1.0f),
+        };
+        for (int i = 0; i < 4; ++i)
+        {
+            renderTarget_->DrawLine(
+                points[i],
+                points[i + 1],
+                brush_.Get(),
+                1.5f);
+        }
+        renderTarget_->FillEllipse(
+            D2D1::Ellipse(points[4], 1.5f, 1.5f),
+            brush_.Get());
+        return;
+    }
+
     renderTarget_->DrawEllipse(D2D1::Ellipse(center, 4.4f, 4.4f), brush_.Get(), 1.3f);
     for (int i = 0; i < 8; ++i)
     {
@@ -3724,6 +4097,57 @@ D2D1_RECT_F SettingsWindow::ShowKeysRowRect() const
 D2D1_RECT_F SettingsWindow::ShowKeysToggleRect() const
 {
     return Rect(536.0f, 324.0f, 576.0f, 346.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailRowRect() const
+{
+    return Rect(kContentX, 386.0f, kContentX + kContentW, 426.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailToggleRect() const
+{
+    return Rect(536.0f, 390.0f, 576.0f, 412.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailEnableRect() const
+{
+    return Rect(kContentX, 84.0f, kContentX + kContentW, 128.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailEnableToggleRect() const
+{
+    return Rect(520.0f, 94.0f, 560.0f, 116.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailTrackRect(int index) const
+{
+    const float top = 172.0f + static_cast<float>(index) * 48.0f;
+    return Rect(kContentX, top, kContentX + kContentW, top + 4.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailColorAutoRect() const
+{
+    return Rect(188.0f, 454.0f, 262.0f, 484.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailColorCustomRect() const
+{
+    return Rect(270.0f, 454.0f, 344.0f, 484.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailColorSwatchRect() const
+{
+    return Rect(352.0f, 454.0f, 384.0f, 484.0f);
+}
+
+D2D1_RECT_F SettingsWindow::TrailResetRect() const
+{
+    return Rect(188.0f, 492.0f, 308.0f, 516.0f);
+}
+
+D2D1_RECT_F SettingsWindow::ResetAllRect() const
+{
+    return Rect(400.0f, 510.0f, 576.0f, 534.0f);
 }
 
 D2D1_RECT_F SettingsWindow::StackToggleRect() const
@@ -4185,6 +4609,56 @@ void SettingsWindow::OnLeftDown(float x, float y)
             return;
         }
     }
+    else if (page_ == Page::Trail)
+    {
+        if (InRect(x, y, TrailEnableRect()))
+        {
+            SetFocusId(FocusId::TrailEnabled);
+            settings_->trailEnabled = !settings_->trailEnabled;
+            if (host_)
+                host_->OnSettingsTrailChanged(settings_->trailEnabled);
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return;
+        }
+        for (int i = 0; i < 6; ++i)
+        {
+            if (InRect(x, y, TrailTrackRect(i)))
+            {
+                SetFocusId(static_cast<FocusId>(
+                    static_cast<int>(FocusId::TrailLength) + i));
+                sliderDrag_ = static_cast<SliderDrag>(
+                    static_cast<int>(SliderDrag::TrailLength) + i);
+                SetCapture(hwnd_);
+                UpdateTrailValue(i, x);
+                return;
+            }
+        }
+        if (InRect(x, y, TrailColorAutoRect()))
+        {
+            SetFocusId(FocusId::TrailColorAuto);
+            SetTrailColorAuto(true);
+            return;
+        }
+        if (InRect(x, y, TrailColorCustomRect()) || InRect(x, y, TrailColorSwatchRect()))
+        {
+            SetFocusId(InRect(x, y, TrailColorCustomRect())
+                ? FocusId::TrailColorCustom
+                : FocusId::TrailColorSwatch);
+            const bool wasAutomatic = settings_->trailColorAuto;
+            // Capture the automatic state for cancel, then switch the visible
+            // draft to custom while the picker is open.
+            OpenColorPicker(ColorTarget::Trail);
+            if (wasAutomatic)
+                SetTrailColorAuto(false);
+            return;
+        }
+        if (InRect(x, y, TrailResetRect()))
+        {
+            SetFocusId(FocusId::TrailReset);
+            ResetTrailDefaults();
+            return;
+        }
+    }
     else if (page_ == Page::Stack)
     {
         if (InRect(x, y, Rect(kContentX, 84.0f, kContentX + kContentW, 124.0f)))
@@ -4277,6 +4751,21 @@ void SettingsWindow::OnLeftDown(float x, float y)
             if (host_)
                 host_->OnSettingsShowKeysChanged(settings_->showKeys);
             InvalidateRect(hwnd_, nullptr, FALSE);
+            return;
+        }
+        if (InRect(x, y, TrailRowRect()))
+        {
+            SetFocusId(FocusId::TrailEnabled);
+            settings_->trailEnabled = !settings_->trailEnabled;
+            if (host_)
+                host_->OnSettingsTrailChanged(settings_->trailEnabled);
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return;
+        }
+        if (InRect(x, y, ResetAllRect()))
+        {
+            SetFocusId(FocusId::ResetAll);
+            ResetAllDefaults();
             return;
         }
     }
@@ -4399,6 +4888,14 @@ void SettingsWindow::OnMouseMove(float x, float y)
         UpdateClickVolumeValue(x);
         return;
     }
+    if (sliderDrag_ >= SliderDrag::TrailLength &&
+        sliderDrag_ <= SliderDrag::TrailGlow)
+    {
+        const int index = static_cast<int>(sliderDrag_) -
+            static_cast<int>(SliderDrag::TrailLength);
+        UpdateTrailValue(index, x);
+        return;
+    }
     if (sliderDrag_ == SliderDrag::StackDelay)
     {
         UpdateStackDelayValue(x);
@@ -4507,6 +5004,13 @@ void SettingsWindow::OpenColorPicker(ColorTarget target)
     case ColorTarget::ClickRight:
         colorBeforePicker_ = settings_->clickRightRgb;
         break;
+    case ColorTarget::Trail:
+        colorBeforeTrailAuto_ = settings_->trailColorAuto;
+        colorBeforeTrailRgb_ = settings_->trailColorRgb;
+        colorBeforePicker_ = settings_->trailColorAuto
+            ? settings_->accentRgb
+            : settings_->trailColorRgb;
+        break;
     }
     colorDraftRgb_ = colorBeforePicker_;
     RgbToHsv(colorDraftRgb_, colorHue_, colorSaturation_, colorValue_);
@@ -4563,6 +5067,9 @@ void SettingsWindow::CancelColorPicker()
     case ColorTarget::ClickRight:
         focus_ = FocusId::ClickColorRight;
         break;
+    case ColorTarget::Trail:
+        focus_ = FocusId::TrailColorSwatch;
+        break;
     }
     if (GetCapture() == hwnd_)
         ReleaseCapture();
@@ -4608,6 +5115,12 @@ void SettingsWindow::CancelColorPicker()
         if (host_)
             host_->OnSettingsClickChanged();
         break;
+    case ColorTarget::Trail:
+        settings_->trailColorAuto = colorBeforeTrailAuto_;
+        settings_->trailColorRgb = colorBeforeTrailRgb_;
+        if (host_)
+            host_->OnSettingsTrailSettingsChanged();
+        break;
     }
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
@@ -4646,6 +5159,9 @@ void SettingsWindow::CommitColorPicker()
     case ColorTarget::ClickRight:
         focus_ = FocusId::ClickColorRight;
         break;
+    case ColorTarget::Trail:
+        focus_ = FocusId::TrailColorSwatch;
+        break;
     }
     if (GetCapture() == hwnd_)
         ReleaseCapture();
@@ -4682,6 +5198,12 @@ void SettingsWindow::CommitColorPicker()
         settings_->clickRightRgb = colorDraftRgb_ & 0xFFFFFFu;
         if (host_)
             host_->OnSettingsClickChanged();
+        break;
+    case ColorTarget::Trail:
+        settings_->trailColorRgb = colorDraftRgb_ & 0xFFFFFFu;
+        settings_->trailColorAuto = false;
+        if (host_)
+            host_->OnSettingsTrailSettingsChanged();
         break;
     default:
         break;
@@ -4730,6 +5252,12 @@ void SettingsWindow::ApplyColorDraft(unsigned rgb, bool notify)
         settings_->clickRightRgb = colorDraftRgb_;
         if (notify && host_)
             host_->OnSettingsClickChanged();
+        break;
+    case ColorTarget::Trail:
+        settings_->trailColorRgb = colorDraftRgb_;
+        settings_->trailColorAuto = false;
+        if (notify && host_)
+            host_->OnSettingsTrailSettingsChanged();
         break;
     }
     SyncHexFromColor();
@@ -5037,6 +5565,23 @@ bool SettingsWindow::HitTestInteractive(float x, float y) const
             InRect(x, y, KeyTextAutoRect()) || InRect(x, y, KeyTextColorRect()) ||
             InRect(x, y, KeyStyleColorRect());
     }
+    if (page_ == Page::Trail)
+    {
+        if (InRect(x, y, TrailEnableRect()) ||
+            InRect(x, y, TrailColorAutoRect()) ||
+            InRect(x, y, TrailColorCustomRect()) ||
+            InRect(x, y, TrailColorSwatchRect()) ||
+            InRect(x, y, TrailResetRect()))
+        {
+            return true;
+        }
+        for (int i = 0; i < 6; ++i)
+        {
+            if (InRect(x, y, TrailTrackRect(i)))
+                return true;
+        }
+        return false;
+    }
     if (page_ == Page::Stack)
     {
         return InRect(x, y, Rect(kContentX, 84.0f, kContentX + kContentW, 124.0f)) ||
@@ -5070,7 +5615,8 @@ bool SettingsWindow::HitTestInteractive(float x, float y) const
     if (page_ == Page::General)
     {
         if (!InRect(x, y, AutoStartRowRect()) && !InRect(x, y, HotkeyPillRect()) &&
-            !InRect(x, y, ShowKeysRowRect()))
+            !InRect(x, y, ShowKeysRowRect()) && !InRect(x, y, TrailRowRect()) &&
+            !InRect(x, y, ResetAllRect()))
         {
             for (int i = 0; i < 3; ++i)
             {

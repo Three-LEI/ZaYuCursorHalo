@@ -23,8 +23,7 @@ using std::min;
 namespace
 {
 constexpr wchar_t kTrailClass[] = L"ZaYuCursorHalo.Trail.P1";
-constexpr UINT kFrameIntervalMs = 33;
-constexpr ULONGLONG kTrailLifetimeMs = 320;
+constexpr UINT kFrameIntervalMs = 16;
 constexpr float kTrailLengthDip = 260.0f;
 constexpr float kTrailBaseWidthDip = 5.5f;
 constexpr float kTrailPaddingDip = 18.0f;
@@ -95,6 +94,10 @@ void TrailOverlay::Stop()
         stopEvent_ = nullptr;
     }
     context_ = nullptr;
+    samples_.clear();
+    hasLastCursor_ = false;
+    lastMoveAt_ = 0;
+    fadeAlpha_ = 1.0f;
 }
 
 void TrailOverlay::Run()
@@ -181,8 +184,7 @@ void TrailOverlay::Update()
     if (!context_ || !running_.load())
         return;
 
-    if (!context_->enabled.load() ||
-        context_->trayPanelOpen.load() || context_->benchmark.load())
+    if (context_->trayPanelOpen.load() || context_->benchmark.load())
     {
         Hide();
         samples_.clear();
@@ -201,12 +203,36 @@ void TrailOverlay::Update()
             samples_.push_back({cursor, now});
         lastCursor_ = cursor;
         hasLastCursor_ = true;
+        lastMoveAt_ = now;
+        fadeAlpha_ = 1.0f;
+    }
+
+    const ULONGLONG lifetime = static_cast<ULONGLONG>(
+        (std::max)(100, (std::min)(1200, context_->trailLifetimeMs.load())));
+    const ULONGLONG fadeWindow = 180;
+    const ULONGLONG fadeStart = lifetime > fadeWindow ? lifetime - fadeWindow : 0;
+    const ULONGLONG idle = now - lastMoveAt_;
+    if (idle <= fadeStart)
+    {
+        fadeAlpha_ = 1.0f;
+    }
+    else if (idle >= lifetime)
+    {
+        fadeAlpha_ = 0.0f;
+    }
+    else
+    {
+        fadeAlpha_ = 1.0f - static_cast<float>(idle - fadeStart) /
+            static_cast<float>(fadeWindow);
     }
 
     Prune(now);
     if (samples_.size() < 2)
     {
-        Hide();
+        if (fadeAlpha_ > 0.01f)
+            Render();
+        else
+            Hide();
         return;
     }
 
@@ -215,7 +241,10 @@ void TrailOverlay::Update()
         pathLength += Distance(samples_[i - 1].point, samples_[i].point);
     if (pathLength < 1.5f)
     {
-        Hide();
+        if (fadeAlpha_ > 0.01f)
+            Render();
+        else
+            Hide();
         return;
     }
 
@@ -224,10 +253,15 @@ void TrailOverlay::Update()
 
 void TrailOverlay::Prune(ULONGLONG now)
 {
-    while (!samples_.empty() && now - samples_.front().time > kTrailLifetimeMs)
+    const ULONGLONG lifetime = static_cast<ULONGLONG>(
+        (std::max)(100, (std::min)(1200, context_ ? context_->trailLifetimeMs.load() : 320)));
+    while (!samples_.empty() && now - samples_.front().time > lifetime)
         samples_.pop_front();
 
-    const float maxLength = kTrailLengthDip * SystemScale();
+    const int lengthPercent = (std::max)(50, (std::min)(
+        200, context_ ? context_->trailLengthPercent.load() : 100));
+    const float maxLength = kTrailLengthDip * SystemScale() *
+        static_cast<float>(lengthPercent) / 100.0f;
     while (samples_.size() > 2)
     {
         float length = 0.0f;
@@ -244,19 +278,47 @@ void TrailOverlay::Prune(ULONGLONG now)
 void TrailOverlay::Render()
 {
     const float scale = SystemScale();
-    const int padding = static_cast<int>(std::lround(kTrailPaddingDip * scale));
+    const int widthPercent = (std::max)(50, (std::min)(
+        200, context_ ? context_->trailWidthPercent.load() : 100));
+    const int opacityPercent = (std::max)(10, (std::min)(
+        100, context_ ? context_->trailOpacityPercent.load() : 100));
+    const int glowPercent = (std::max)(0, (std::min)(
+        100, context_ ? context_->trailGlowPercent.load() : 60));
+    const int smoothness = (std::max)(0, (std::min)(
+        100, context_ ? context_->trailSmoothness.load() : 70));
+    const float baseWidth = kTrailBaseWidthDip * scale *
+        static_cast<float>(widthPercent) / 100.0f;
+    const float glowWidth = 9.0f * scale * static_cast<float>(glowPercent) / 100.0f;
+    const float opacity = static_cast<float>(opacityPercent) / 100.0f;
+    const int padding = static_cast<int>(std::lround(
+        kTrailPaddingDip * scale + baseWidth + glowWidth));
     const int vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
     const int vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
     const int vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     const int vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    RECT bounds = {INT_MAX, INT_MAX, INT_MIN, INT_MIN};
+    std::vector<POINT> points;
+    points.reserve(samples_.size() + 1);
     for (const Sample& sample : samples_)
+        points.push_back(sample.point);
+    if (hasLastCursor_ &&
+        (points.empty() || Distance(lastCursor_, points.back()) >= 0.5f))
     {
-        bounds.left = static_cast<LONG>(std::min<int>(static_cast<int>(bounds.left), sample.point.x));
-        bounds.top = static_cast<LONG>(std::min<int>(static_cast<int>(bounds.top), sample.point.y));
-        bounds.right = static_cast<LONG>(std::max<int>(static_cast<int>(bounds.right), sample.point.x));
-        bounds.bottom = static_cast<LONG>(std::max<int>(static_cast<int>(bounds.bottom), sample.point.y));
+        points.push_back(lastCursor_);
+    }
+    if (points.empty())
+    {
+        Hide();
+        return;
+    }
+
+    RECT bounds = {INT_MAX, INT_MAX, INT_MIN, INT_MIN};
+    for (POINT point : points)
+    {
+        bounds.left = static_cast<LONG>(std::min<int>(static_cast<int>(bounds.left), point.x));
+        bounds.top = static_cast<LONG>(std::min<int>(static_cast<int>(bounds.top), point.y));
+        bounds.right = static_cast<LONG>(std::max<int>(static_cast<int>(bounds.right), point.x));
+        bounds.bottom = static_cast<LONG>(std::max<int>(static_cast<int>(bounds.bottom), point.y));
     }
     bounds.left -= padding;
     bounds.top -= padding;
@@ -285,11 +347,12 @@ void TrailOverlay::Render()
     graphics.SetCompositingMode(Gdiplus::CompositingModeSourceOver);
     graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
 
-    const unsigned rgb = context_->accentRgb.load();
+    const unsigned rgb = (context_->trailColorAuto.load()
+        ? context_->accentRgb.load()
+        : context_->trailColorRgb.load()) & 0xFFFFFFu;
     const BYTE r = static_cast<BYTE>((rgb >> 16) & 0xFF);
     const BYTE g = static_cast<BYTE>((rgb >> 8) & 0xFF);
     const BYTE b = static_cast<BYTE>(rgb & 0xFF);
-    const float baseWidth = kTrailBaseWidthDip * scale;
 
     auto local = [&](POINT p)
     {
@@ -299,20 +362,22 @@ void TrailOverlay::Render()
     };
 
     std::vector<Gdiplus::PointF> rawPoints;
-    rawPoints.reserve(samples_.size());
-    for (const Sample& sample : samples_)
-        rawPoints.push_back(local(sample.point));
+    rawPoints.reserve(points.size());
+    for (POINT point : points)
+        rawPoints.push_back(local(point));
+
+    const float fade = (std::max)(0.0f, (std::min)(1.0f, fadeAlpha_));
 
     if (rawPoints.size() >= 2)
     {
         std::vector<Gdiplus::PointF> pathPoints;
-        if (rawPoints.size() == 2)
+        if (rawPoints.size() == 2 || smoothness < 10)
         {
             pathPoints = rawPoints;
         }
         else
         {
-            constexpr int kSubdivisions = 4;
+            const int kSubdivisions = 1 + smoothness * 5 / 100;
             pathPoints.reserve((rawPoints.size() - 1) * kSubdivisions + 1);
             for (size_t i = 0; i + 1 < rawPoints.size(); ++i)
             {
@@ -419,14 +484,47 @@ void TrailOverlay::Render()
                 headHalf * 2.0f);
         };
 
-        drawRibbon(
-            9.0f * scale,
-            Gdiplus::Color(0, r, g, b),
-            Gdiplus::Color(54, r, g, b));
+        if (glowWidth > 0.01f)
+        {
+            drawRibbon(
+                glowWidth,
+                Gdiplus::Color(0, r, g, b),
+                Gdiplus::Color(
+                    static_cast<BYTE>(std::lround(54.0f * opacity * fade)),
+                    r, g, b));
+        }
         drawRibbon(
             0.0f,
             Gdiplus::Color(0, r, g, b),
-            Gdiplus::Color(230, r, g, b));
+            Gdiplus::Color(
+                static_cast<BYTE>(std::lround(230.0f * opacity * fade)),
+                r, g, b));
+    }
+    else
+    {
+        const Gdiplus::PointF head = rawPoints.front();
+        const float headHalf = baseWidth / 2.0f;
+        if (glowWidth > 0.01f)
+        {
+            Gdiplus::SolidBrush glowBrush(Gdiplus::Color(
+                static_cast<BYTE>(std::lround(48.0f * opacity * fade)),
+                r, g, b));
+            graphics.FillEllipse(
+                &glowBrush,
+                head.X - headHalf - glowWidth,
+                head.Y - headHalf - glowWidth,
+                (headHalf + glowWidth) * 2.0f,
+                (headHalf + glowWidth) * 2.0f);
+        }
+        Gdiplus::SolidBrush headBrush(Gdiplus::Color(
+            static_cast<BYTE>(std::lround(230.0f * opacity * fade)),
+            r, g, b));
+        graphics.FillEllipse(
+            &headBrush,
+            head.X - headHalf,
+            head.Y - headHalf,
+            headHalf * 2.0f,
+            headHalf * 2.0f);
     }
 
     graphics.Flush();

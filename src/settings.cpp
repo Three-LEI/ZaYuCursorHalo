@@ -126,6 +126,22 @@ std::wstring BuildIni(const AppSettings& settings)
     text += settings.timerHasPosition ? L"1" : L"0";
     text += L"\r\n\r\n[trail]\r\nenabled=";
     text += settings.trailEnabled ? L"1" : L"0";
+    text += L"\r\nlength_percent=";
+    text += std::to_wstring(settings.trailLengthPercent);
+    text += L"\r\nlifetime_ms=";
+    text += std::to_wstring(settings.trailLifetimeMs);
+    text += L"\r\nsmoothness=";
+    text += std::to_wstring(settings.trailSmoothness);
+    text += L"\r\nwidth_percent=";
+    text += std::to_wstring(settings.trailWidthPercent);
+    text += L"\r\nopacity_percent=";
+    text += std::to_wstring(settings.trailOpacityPercent);
+    text += L"\r\nglow_percent=";
+    text += std::to_wstring(settings.trailGlowPercent);
+    text += L"\r\ncolor_auto=";
+    text += settings.trailColorAuto ? L"1" : L"0";
+    text += L"\r\ncolor=";
+    text += FormatRgbHex(settings.trailColorRgb);
     text += L"\r\n";
     return text;
 }
@@ -286,6 +302,22 @@ AppSettings SettingsStore::Load(const std::wstring& path)
     settings.timerY = GetPrivateProfileIntW(L"timer", L"y", 0, path.c_str());
     settings.timerHasPosition = GetPrivateProfileIntW(L"timer", L"has_position", 0, path.c_str()) != 0;
     settings.trailEnabled = GetPrivateProfileIntW(L"trail", L"enabled", 0, path.c_str()) != 0;
+    settings.trailLengthPercent = (std::max)(50, (std::min)(
+        200, static_cast<int>(GetPrivateProfileIntW(L"trail", L"length_percent", 100, path.c_str()))));
+    settings.trailLifetimeMs = (std::max)(100, (std::min)(
+        1200, static_cast<int>(GetPrivateProfileIntW(L"trail", L"lifetime_ms", 320, path.c_str()))));
+    settings.trailSmoothness = (std::max)(0, (std::min)(
+        100, static_cast<int>(GetPrivateProfileIntW(L"trail", L"smoothness", 70, path.c_str()))));
+    settings.trailWidthPercent = (std::max)(50, (std::min)(
+        200, static_cast<int>(GetPrivateProfileIntW(L"trail", L"width_percent", 100, path.c_str()))));
+    settings.trailOpacityPercent = (std::max)(10, (std::min)(
+        100, static_cast<int>(GetPrivateProfileIntW(L"trail", L"opacity_percent", 100, path.c_str()))));
+    settings.trailGlowPercent = (std::max)(0, (std::min)(
+        100, static_cast<int>(GetPrivateProfileIntW(L"trail", L"glow_percent", 60, path.c_str()))));
+    settings.trailColorAuto = GetPrivateProfileIntW(L"trail", L"color_auto", 1, path.c_str()) != 0;
+    wchar_t trailColor[32] = {};
+    GetPrivateProfileStringW(L"trail", L"color", L"5B8DFF", trailColor, _countof(trailColor), path.c_str());
+    ParseRgbHex(trailColor, settings.trailColorRgb, 0x5B8DFF);
     return settings;
 }
 

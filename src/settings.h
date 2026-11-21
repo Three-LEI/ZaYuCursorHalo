@@ -181,6 +181,14 @@ struct AppSettings
     int timerY = 0;
     bool timerHasPosition = false;
     bool trailEnabled = false;
+    int trailLengthPercent = 100;
+    int trailLifetimeMs = 320;
+    int trailSmoothness = 70;
+    int trailWidthPercent = 100;
+    int trailOpacityPercent = 100;
+    int trailGlowPercent = 60;
+    bool trailColorAuto = true;
+    unsigned trailColorRgb = 0x5B8DFF;
     bool firstRun = true;
 };
 

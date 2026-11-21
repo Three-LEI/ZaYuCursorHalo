@@ -30,6 +30,14 @@ struct AppContext
     std::atomic<bool> clickRippleEnabled{false};
     std::atomic<bool> clickSoundEnabled{false};
     std::atomic<int> clickVolumePercent{100};
+    std::atomic<int> trailLengthPercent{100};
+    std::atomic<int> trailLifetimeMs{320};
+    std::atomic<int> trailSmoothness{70};
+    std::atomic<int> trailWidthPercent{100};
+    std::atomic<int> trailOpacityPercent{100};
+    std::atomic<int> trailGlowPercent{60};
+    std::atomic<bool> trailColorAuto{true};
+    std::atomic<unsigned> trailColorRgb{0x5B8DFF};
     std::atomic<unsigned> clickLeftRgb{0x5B8DFF};
     std::atomic<unsigned> clickRightRgb{0xFF6B6B};
     std::atomic<int> clickSoundPreset{0};

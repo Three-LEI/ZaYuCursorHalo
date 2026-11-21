@@ -67,4 +67,6 @@ private:
     std::deque<Sample> samples_;
     POINT lastCursor_ = {};
     bool hasLastCursor_ = false;
+    ULONGLONG lastMoveAt_ = 0;
+    float fadeAlpha_ = 1.0f;
 };

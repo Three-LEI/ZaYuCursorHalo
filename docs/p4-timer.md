@@ -1,7 +1,7 @@
 # P4 浮动计时器
 
 > 适用版本：ZaYuCursorHalo v0.3.0  
-> exe：825,344 B
+> exe：842,752 B
 
 ## 界面
 
