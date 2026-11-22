@@ -8,9 +8,45 @@
 
 > v0.3.0 · MIT License · Windows 7 SP1 / 8 / 10 / 11
 
-![按键设置](artifacts/readme-keys.png)
+## 界面预览
 
-![按键堆叠](artifacts/readme-stack.png)
+默认浅色、蓝色主题，全部 9 个设置页：
+
+### 高亮
+鼠标跟随光环、样式、大小和不透明度。
+![高亮设置](artifacts/readme-page-highlight.png)
+
+### 外观
+光环颜色色板和自定义颜色。
+![外观设置](artifacts/readme-page-appearance.png)
+
+### 按键
+键帽皮肤、屏幕位置、缩放、不透明度和按键过滤。
+![按键设置](artifacts/readme-page-keys.png)
+
+### 堆叠
+连续快捷键逐条保留，独立延迟、串行消失。
+![按键堆叠](artifacts/readme-page-stack.png)
+
+### 计时
+正计时/倒计时、小时位、停止归零和分段。
+![计时器设置](artifacts/readme-page-timer.png)
+
+### 点击
+左右键波纹颜色、开关、音效预设和音量。
+![点击反馈设置](artifacts/readme-page-click.png)
+
+### 拖尾
+独立开关，长度、停留、平滑度、宽度、透明度、发光和颜色。
+![拖尾设置](artifacts/readme-page-trail.png)
+
+### 通用
+开机启动、全局快捷键、主题、显示按键、拖尾和全部重置。
+![通用设置](artifacts/readme-page-general.png)
+
+### 关于
+仓库、Releases、版本、许可证、第三方组件和作者主页按钮。
+![关于页](artifacts/readme-page-about.png)
 
 ## 下载 / 快速试用
 
@@ -41,6 +77,7 @@ scripts\build-win7-x86.cmd
 - 鼠标拖尾：独立开关，不依赖鼠标高亮；关闭高亮后仍可使用。可调长度、停留时间、曲线平滑度、宽度、不透明度、发光和颜色，并支持重置默认。
 - 点击反馈：左右键波纹，10 个点击音效预设，0–100% 音量，支持导入 WAV/MP3（MP3 本地解码为 WAV）。
 - 设置窗口：普通任务栏窗口，可从任务栏或 Alt+Tab 切回；打开设置时光环、按键、拖尾和点击反馈仍实时生效；通用页支持一键恢复所有默认选项。
+- 关于页：显示开源仓库、Releases、版本、许可证和第三方组件，可打开或复制仓库地址，并附哔哩哔哩主页按钮。
 - 计时器：时间码使用较小字号的 DSEG7，并在胶囊内居中；窗口尺寸变化时保持视觉中心不跳动。
 - 单实例运行，普通用户权限，不安装服务或驱动。
 
@@ -50,7 +87,7 @@ scripts\build-win7-x86.cmd
 - 滑块：方向键、`Home`/`End`、`PgUp`/`PgDn`。
 - 调色盘：`Tab` 在 SV、色相、HEX、取消、完成间循环；`Enter` 完成，`Esc` 取消。
 - 托盘面板：方向键 / `Tab` 移动，`Enter`/`Space` 执行，`Esc` 关闭。
-- 按键显示由独立低级键盘钩子采集，只做屏幕绘制，不记录按键；设置打开时暂停，关闭后恢复。
+- 按键显示由独立低级键盘钩子采集，只做屏幕绘制，不记录按键；设置窗口打开时仍正常显示。
 
 ## 配置
 
@@ -145,6 +182,7 @@ scripts\build-win7-x86.cmd
 - [鼠标拖尾](docs/p4-trail.md)
 - [应用图标](docs/p4-icon.md)
 - [点击反馈与光环样式](docs/p5-interaction.md)
+- [关于页与开源信息](docs/p6-about.md)
 - [技术路线](docs/technical-roadmap.md)
 - [构建工具链](docs/toolchain-setup.md)
 

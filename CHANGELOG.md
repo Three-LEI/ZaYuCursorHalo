@@ -25,6 +25,7 @@
 - Stack rows collapse their layout height while exiting, so the next row moves up continuously instead of jumping a full row.
 - Stack window height is fixed for the display session, preventing bottom-center rows from simultaneously moving down with the window and up during collapse.
 - Stack exits use two phases per row: downward fade, then an empty-slot collapse that moves the next row up; only then does that next row begin its own downward fade.
+- Added an About page with repository/release links, version, license, third-party credits, clipboard copy, and a Bilibili profile button.
 - Mouse trail, left/right click ripples and ten click-sound presets.
 - WAV/MP3 click sound import; MP3 is decoded locally to PCM WAV.
 - Tray panel, settings window, hotkey recording, theme and start-with-Windows.

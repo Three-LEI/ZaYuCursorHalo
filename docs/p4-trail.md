@@ -13,9 +13,9 @@
 
 ![鼠标拖尾](../artifacts/p4-trail.png)
 
-![拖尾设置页](../artifacts/p5-trail-page.png)
+![拖尾设置页](../artifacts/readme-page-trail.png)
 
-![通用页重置所有选项](../artifacts/p5-general-reset.png)
+![通用页重置所有选项](../artifacts/readme-page-general.png)
 
 ## 设置项
 

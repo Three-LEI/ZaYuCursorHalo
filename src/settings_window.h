@@ -65,6 +65,7 @@ private:
         Click = 5,
         Trail = 6,
         General = 7,
+        About = 8,
     };
 
     enum class SliderDrag
@@ -103,6 +104,7 @@ private:
         NavClick,
         NavTrail,
         NavGeneral,
+        NavAbout,
         Enable,
         HaloStyleRing,
         HaloStyleDouble,
@@ -134,6 +136,10 @@ private:
         TrailColorSwatch,
         TrailReset,
         ResetAll,
+        AboutRepo,
+        AboutCopy,
+        AboutReleases,
+        AboutBilibili,
         StackEnabled,
         StackDelay,
         SkinFill,
@@ -226,6 +232,7 @@ private:
         const D2D1_COLOR_F& accent);
     void DrawStackPage(const D2D1_COLOR_F& accent);
     void DrawTrailPage(const D2D1_COLOR_F& accent);
+    void DrawAboutPage(const D2D1_COLOR_F& accent);
     void DrawSkinPage(const D2D1_COLOR_F& accent);
     void DrawGeneralPage(const D2D1_COLOR_F& accent);
     void DrawKeyPreviewCaps(const D2D1_COLOR_F& accent);
@@ -331,6 +338,10 @@ private:
     D2D1_RECT_F TrailColorSwatchRect() const;
     D2D1_RECT_F TrailResetRect() const;
     D2D1_RECT_F ResetAllRect() const;
+    D2D1_RECT_F AboutRepoRect() const;
+    D2D1_RECT_F AboutCopyRect() const;
+    D2D1_RECT_F AboutReleasesRect() const;
+    D2D1_RECT_F AboutBilibiliRect() const;
     D2D1_RECT_F StackToggleRect() const;
     D2D1_RECT_F StackDelayTrackRect() const;
     D2D1_RECT_F SkinSwatchRect(int index) const;

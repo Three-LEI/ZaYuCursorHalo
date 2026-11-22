@@ -1,7 +1,7 @@
 # P3 按键可视化
 
 > 适用版本：ZaYuCursorHalo v0.3.0  
-> 当前 exe：842,752 B
+> 当前 exe：847,872 B
 
 ## 功能
 
@@ -55,7 +55,7 @@
 - 右键右色块恢复自动；
 - 主色只作用于极简皮肤。
 
-![皮肤与主色](../artifacts/readme-keys.png)
+![皮肤与主色](../artifacts/readme-page-keys.png)
 
 ![机械皮肤](../artifacts/p5-skin-mechanical.png)
 
@@ -72,7 +72,7 @@
 - 单独按修饰键也会保留一行，使用正常的堆叠延迟和淡出；
 - 关闭后立即清空历史，只显示当前组合。
 
-![堆叠设置](../artifacts/readme-stack.png)
+![堆叠设置](../artifacts/readme-page-stack.png)
 
 ## 连续输入
 

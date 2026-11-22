@@ -6,10 +6,12 @@
 #include <imm.h>
 #include <windowsx.h>
 #include <commdlg.h>
+#include <shellapi.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <cwchar>
 #include <string>
 
@@ -51,14 +53,49 @@ constexpr float kHexFieldLeft = 122.0f;
 constexpr float kHexFieldTop = kModalTop + 202.0f;
 constexpr float kHexFieldRight = 300.0f;
 constexpr float kHexFieldBottom = kModalTop + 238.0f;
+constexpr wchar_t kRepositoryUrl[] = L"https://github.com/Three-LEI/ZaYuCursorHalo";
+constexpr wchar_t kReleasesUrl[] = L"https://github.com/Three-LEI/ZaYuCursorHalo/releases";
+constexpr wchar_t kBilibiliUrl[] = L"https://space.bilibili.com/353544977";
+
+void OpenExternalUrl(const wchar_t* url)
+{
+    if (url && *url)
+        ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+void CopyTextToClipboard(HWND owner, const wchar_t* text)
+{
+    if (!text || !*text || !OpenClipboard(owner))
+        return;
+    EmptyClipboard();
+    const size_t bytes = (wcslen(text) + 1) * sizeof(wchar_t);
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (memory)
+    {
+        void* target = GlobalLock(memory);
+        if (target)
+        {
+            memcpy(target, text, bytes);
+            GlobalUnlock(memory);
+            if (!SetClipboardData(CF_UNICODETEXT, memory))
+                GlobalFree(memory);
+        }
+        else
+        {
+            GlobalFree(memory);
+        }
+    }
+    CloseClipboard();
+}
+
 constexpr float kHexCellsLeft = 164.0f;
 constexpr float kHexCellWidth = 16.5f;
 constexpr float kHexCellTop = kModalTop + 210.0f;
 constexpr float kHexCellBottom = kModalTop + 230.0f;
-constexpr int kPageCount = 8;
-const wchar_t* kNavLabels[8] = {
-    L"高亮", L"外观", L"按键", L"堆叠", L"计时", L"点击", L"拖尾", L"通用"};
-const wchar_t* kPageTitles[8] = {
+constexpr int kPageCount = 9;
+const wchar_t* kNavLabels[9] = {
+    L"高亮", L"外观", L"按键", L"堆叠", L"计时", L"点击", L"拖尾", L"通用", L"关于"};
+const wchar_t* kPageTitles[9] = {
     L"鼠标高亮",
     L"外观",
     L"按键显示",
@@ -67,8 +104,9 @@ const wchar_t* kPageTitles[8] = {
     L"点击反馈",
     L"鼠标拖尾",
     L"通用",
+    L"关于",
 };
-const wchar_t* kPageSubtitles[8] = {
+const wchar_t* kPageSubtitles[9] = {
     L"让指针在屏幕里更清晰",
     L"选择一个适合当前场景的光环颜色",
     L"键帽皮肤、位置与过滤规则",
@@ -77,6 +115,7 @@ const wchar_t* kPageSubtitles[8] = {
     L"左键/右键波纹颜色与点击音效",
     L"独立于高亮，调整长度、平滑度与颜色",
     L"启动方式与快捷键",
+    L"开源仓库、版本与第三方组件",
 };
 
 D2D1_COLOR_F Rgb(unsigned rgb, float alpha = 1.0f)
@@ -695,6 +734,7 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         FocusId::NavClick,
         FocusId::NavTrail,
         FocusId::NavGeneral,
+        FocusId::NavAbout,
     };
     if (page_ == Page::Highlight)
     {
@@ -774,7 +814,7 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::TimerResetOnStop);
         order.push_back(FocusId::TimerReset);
     }
-    else
+    else if (page_ == Page::General)
     {
         order.push_back(FocusId::AutoStart);
         order.push_back(FocusId::Hotkey);
@@ -784,6 +824,13 @@ std::vector<SettingsWindow::FocusId> SettingsWindow::BuildFocusOrder() const
         order.push_back(FocusId::ShowKeys);
         order.push_back(FocusId::TrailEnabled);
         order.push_back(FocusId::ResetAll);
+    }
+    else
+    {
+        order.push_back(FocusId::AboutRepo);
+        order.push_back(FocusId::AboutCopy);
+        order.push_back(FocusId::AboutReleases);
+        order.push_back(FocusId::AboutBilibili);
     }
     order.push_back(FocusId::Close);
     return order;
@@ -1294,6 +1341,18 @@ void SettingsWindow::ActivateFocus()
     case FocusId::ResetAll:
         ResetAllDefaults();
         break;
+    case FocusId::AboutRepo:
+        OpenExternalUrl(kRepositoryUrl);
+        break;
+    case FocusId::AboutCopy:
+        CopyTextToClipboard(hwnd_, kRepositoryUrl);
+        break;
+    case FocusId::AboutReleases:
+        OpenExternalUrl(kReleasesUrl);
+        break;
+    case FocusId::AboutBilibili:
+        OpenExternalUrl(kBilibiliUrl);
+        break;
     case FocusId::StackEnabled:
         settings_->keyStack = !settings_->keyStack;
         if (host_)
@@ -1534,6 +1593,18 @@ void SettingsWindow::DrawFocusRingFor(FocusId id)
         break;
     case FocusId::ResetAll:
         StrokeRounded(Rect(396.0f, 506.0f, 580.0f, 538.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::AboutRepo:
+        StrokeRounded(Rect(184.0f, 254.0f, 304.0f, 292.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::AboutCopy:
+        StrokeRounded(Rect(304.0f, 254.0f, 412.0f, 292.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::AboutReleases:
+        StrokeRounded(Rect(412.0f, 254.0f, 580.0f, 292.0f), 8.0f, focusColor, 1.6f);
+        break;
+    case FocusId::AboutBilibili:
+        StrokeRounded(Rect(184.0f, 426.0f, 580.0f, 468.0f), 8.0f, focusColor, 1.6f);
         break;
     case FocusId::TrailLength:
     case FocusId::TrailLifetime:
@@ -2051,6 +2122,9 @@ void SettingsWindow::Draw()
     case Page::General:
         DrawGeneralPage(accent);
         break;
+    case Page::About:
+        DrawAboutPage(accent);
+        break;
     }
 
     DrawCloseButton();
@@ -2102,7 +2176,7 @@ void SettingsWindow::DrawSidebar(const D2D1_COLOR_F& accent)
         }
 
         const D2D1_COLOR_F iconColor = active ? accent : palette_.muted;
-        const int iconCodes[8] = {0, 1, 2, 4, 3, 5, 8, 7};
+        const int iconCodes[9] = {0, 1, 2, 4, 3, 5, 8, 7, 9};
         DrawLineIcon(iconCodes[i], D2D1::Point2F(28.0f, rect.top + kNavH / 2.0f), iconColor);
         DrawTextBlock(
             kNavLabels[i],
@@ -3022,6 +3096,98 @@ void SettingsWindow::DrawTrailPage(const D2D1_COLOR_F& accent)
         palette_.subtle);
 }
 
+void SettingsWindow::DrawAboutPage(const D2D1_COLOR_F& accent)
+{
+    const D2D1_RECT_F card = Rect(kContentX, 84.0f, kContentX + kContentW, 190.0f);
+    FillRounded(card, 12.0f, palette_.surfaceAlt);
+    StrokeRounded(card, 12.0f, palette_.border, 1.0f);
+
+    const D2D1_POINT_2F mark = D2D1::Point2F(kContentX + 34.0f, 118.0f);
+    brush_->SetColor(Blend(palette_.surfaceAlt, accent, 0.14f));
+    renderTarget_->FillEllipse(D2D1::Ellipse(mark, 20.0f, 20.0f), brush_.Get());
+    brush_->SetColor(accent);
+    renderTarget_->DrawEllipse(D2D1::Ellipse(mark, 7.0f, 7.0f), brush_.Get(), 2.0f);
+    renderTarget_->FillEllipse(D2D1::Ellipse(mark, 2.2f, 2.2f), brush_.Get());
+
+    DrawTextBlock(
+        L"ZaYuCursorHalo",
+        bodyStrongFormat_.Get(),
+        Rect(kContentX + 66.0f, 94.0f, kContentX + kContentW - 20.0f, 116.0f),
+        palette_.text);
+    DrawTextBlock(
+        L"v0.3.0 · Windows 7 SP1 x86 优先",
+        captionFormat_.Get(),
+        Rect(kContentX + 66.0f, 116.0f, kContentX + kContentW - 20.0f, 134.0f),
+        palette_.muted);
+    DrawTextBlock(
+        L"原生鼠标高亮 / 按键显示 / 浮动计时器",
+        captionFormat_.Get(),
+        Rect(kContentX + 66.0f, 136.0f, kContentX + kContentW - 20.0f, 154.0f),
+        palette_.subtle);
+    DrawTextBlock(
+        L"three-lei × DeepSeek",
+        captionFormat_.Get(),
+        Rect(kContentX + 66.0f, 156.0f, kContentX + kContentW - 20.0f, 174.0f),
+        palette_.subtle);
+
+    DrawTextBlock(L"开源仓库", bodyStrongFormat_.Get(), Rect(kContentX, 204.0f, 300.0f, 224.0f), palette_.text);
+    const D2D1_RECT_F urlCard = Rect(kContentX, 224.0f, kContentX + kContentW, 254.0f);
+    FillRounded(urlCard, 8.0f, palette_.control);
+    StrokeRounded(urlCard, 8.0f, palette_.border, 1.0f);
+    DrawTextBlock(
+        kRepositoryUrl,
+        captionFormat_.Get(),
+        Rect(kContentX + 12.0f, 230.0f, kContentX + kContentW - 12.0f, 250.0f),
+        accent);
+
+    const wchar_t* buttonLabels[3] = {L"打开仓库", L"复制地址", L"查看 Releases"};
+    const D2D1_RECT_F buttonRects[3] = {
+        AboutRepoRect(), AboutCopyRect(), AboutReleasesRect()};
+    for (int i = 0; i < 3; ++i)
+    {
+        FillRounded(buttonRects[i], 8.0f, palette_.control);
+        StrokeRounded(buttonRects[i], 8.0f, palette_.border, 1.0f);
+        DrawTextBlock(
+            buttonLabels[i],
+            captionCenterFormat_.Get(),
+            buttonRects[i],
+            i == 0 ? palette_.text : palette_.muted);
+    }
+
+    StrokeLine(kContentX, 304.0f, kContentX + kContentW, 304.0f, palette_.divider, 1.0f);
+    DrawTextBlock(L"版本信息", bodyStrongFormat_.Get(), Rect(kContentX, 318.0f, 300.0f, 338.0f), palette_.text);
+
+    const wchar_t* infoLabels[3] = {L"当前版本", L"许可证", L"第三方组件"};
+    const wchar_t* infoValues[3] = {
+        L"0.3.0 · Win7 x86",
+        L"MIT License",
+        L"minimp3 (CC0) · DSEG7 Modern (OFL 1.1)",
+    };
+    for (int i = 0; i < 3; ++i)
+    {
+        const float top = 346.0f + static_cast<float>(i) * 26.0f;
+        DrawTextBlock(
+            infoLabels[i],
+            captionFormat_.Get(),
+            Rect(kContentX, top, 280.0f, top + 20.0f),
+            palette_.muted);
+        DrawTextBlock(
+            infoValues[i],
+            captionFormat_.Get(),
+            Rect(kContentX + 82.0f, top, kContentX + kContentW, top + 20.0f),
+            palette_.text);
+    }
+
+    const D2D1_RECT_F bilibili = AboutBilibiliRect();
+    FillRounded(bilibili, 8.0f, palette_.control);
+    StrokeRounded(bilibili, 8.0f, palette_.border, 1.0f);
+    DrawTextBlock(
+        L"哔哩哔哩主页",
+        captionCenterFormat_.Get(),
+        bilibili,
+        palette_.text);
+}
+
 void SettingsWindow::DrawClickPage(const D2D1_COLOR_F& accent)
 {
     const wchar_t* labels[2] = {L"左键波纹", L"右键波纹"};
@@ -3911,6 +4077,20 @@ void SettingsWindow::DrawLineIcon(int icon, D2D1_POINT_2F center, const D2D1_COL
         return;
     }
 
+    if (icon == 9)
+    {
+        renderTarget_->DrawEllipse(D2D1::Ellipse(center, 7.0f, 7.0f), brush_.Get(), 1.3f);
+        renderTarget_->FillEllipse(
+            D2D1::Ellipse(D2D1::Point2F(center.x, center.y - 2.8f), 1.2f, 1.2f),
+            brush_.Get());
+        renderTarget_->DrawLine(
+            D2D1::Point2F(center.x, center.y - 0.2f),
+            D2D1::Point2F(center.x, center.y + 4.0f),
+            brush_.Get(),
+            1.4f);
+        return;
+    }
+
     if (icon == 8)
     {
         const D2D1_POINT_2F points[5] = {
@@ -4148,6 +4328,26 @@ D2D1_RECT_F SettingsWindow::TrailResetRect() const
 D2D1_RECT_F SettingsWindow::ResetAllRect() const
 {
     return Rect(400.0f, 510.0f, 576.0f, 534.0f);
+}
+
+D2D1_RECT_F SettingsWindow::AboutRepoRect() const
+{
+    return Rect(188.0f, 258.0f, 300.0f, 288.0f);
+}
+
+D2D1_RECT_F SettingsWindow::AboutCopyRect() const
+{
+    return Rect(308.0f, 258.0f, 408.0f, 288.0f);
+}
+
+D2D1_RECT_F SettingsWindow::AboutReleasesRect() const
+{
+    return Rect(416.0f, 258.0f, 576.0f, 288.0f);
+}
+
+D2D1_RECT_F SettingsWindow::AboutBilibiliRect() const
+{
+    return Rect(188.0f, 430.0f, 576.0f, 464.0f);
 }
 
 D2D1_RECT_F SettingsWindow::StackToggleRect() const
@@ -4766,6 +4966,33 @@ void SettingsWindow::OnLeftDown(float x, float y)
         {
             SetFocusId(FocusId::ResetAll);
             ResetAllDefaults();
+            return;
+        }
+    }
+    else if (page_ == Page::About)
+    {
+        if (InRect(x, y, AboutRepoRect()))
+        {
+            SetFocusId(FocusId::AboutRepo);
+            OpenExternalUrl(kRepositoryUrl);
+            return;
+        }
+        if (InRect(x, y, AboutCopyRect()))
+        {
+            SetFocusId(FocusId::AboutCopy);
+            CopyTextToClipboard(hwnd_, kRepositoryUrl);
+            return;
+        }
+        if (InRect(x, y, AboutReleasesRect()))
+        {
+            SetFocusId(FocusId::AboutReleases);
+            OpenExternalUrl(kReleasesUrl);
+            return;
+        }
+        if (InRect(x, y, AboutBilibiliRect()))
+        {
+            SetFocusId(FocusId::AboutBilibili);
+            OpenExternalUrl(kBilibiliUrl);
             return;
         }
     }
@@ -5626,6 +5853,13 @@ bool SettingsWindow::HitTestInteractive(float x, float y) const
             return false;
         }
         return true;
+    }
+    if (page_ == Page::About)
+    {
+        return InRect(x, y, AboutRepoRect()) ||
+            InRect(x, y, AboutCopyRect()) ||
+            InRect(x, y, AboutReleasesRect()) ||
+            InRect(x, y, AboutBilibiliRect());
     }
     return false;
 }
