@@ -60,7 +60,7 @@
 scripts\build-win7-x86.cmd
 ```
 
-生成 `dist\ZaYuCursorHalo.exe`。
+生成 `dist\ZaYuCursorHalo.exe`。完整环境、门禁和测试步骤见 [BUILD.md](BUILD.md)。
 
 ## 功能
 
@@ -169,22 +169,13 @@ scripts\build-win7-x86.cmd
 - 再走一遍托盘、设置、按键、计时器、拖尾、点击音效、Aero/Basic 主题和 125%/150% DPI。
 - 真机结果记录在 Release Notes；未实测不要标记为“绝对兼容”。
 
-真机清单：[docs/WIN7_RELEASE_AUDIT.md](docs/WIN7_RELEASE_AUDIT.md)
+真机测试步骤见 [BUILD.md](BUILD.md)。
 
 ## 文档
 
-- [Win7 发布审计与 API 清单](docs/WIN7_RELEASE_AUDIT.md)
-- [Win7 兼容规范与发布清单](docs/win7-compatibility.md)
-- [GitHub 发布步骤](docs/GITHUB_PUBLISH.md)
-- [按键显示与皮肤](docs/p3-key-visualizer.md)
-- [浮动计时器](docs/p4-timer.md)
-- [高亮层 Z 序](docs/p4-overlay-zorder.md)
-- [鼠标拖尾](docs/p4-trail.md)
-- [应用图标](docs/p4-icon.md)
-- [点击反馈与光环样式](docs/p5-interaction.md)
-- [关于页与开源信息](docs/p6-about.md)
-- [技术路线](docs/technical-roadmap.md)
-- [构建工具链](docs/toolchain-setup.md)
+- [BUILD.md](BUILD.md)：构建、Win7 门禁、冒烟测试与打包
+- [CHANGELOG.md](CHANGELOG.md)：版本变更记录
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)：第三方组件许可证
 
 ## 许可证
 

@@ -48,4 +48,4 @@
 - MSVC v141, `/MT`, `/SUBSYSTEM:WINDOWS,6.01`.
 - Build gate checks x86, subsystem <= 6.01, and forbidden static imports.
 - Win7 runtime validation is listed separately in
-  `docs/WIN7_RELEASE_AUDIT.md`; the current CI/host smoke test is on Windows 11.
+  `BUILD.md`; the current CI/host smoke test is on Windows 11.

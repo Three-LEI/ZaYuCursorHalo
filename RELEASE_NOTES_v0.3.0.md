@@ -6,7 +6,7 @@ Windows 7 SP1 x86 优先的原生桌面鼠标高亮 / 键盘显示 / 浮动计�
 
 发布资产：`ZaYuCursorHalo-v0.3.0-win7-x86.zip`
 
-- SHA256: `BD1D69033A292792EB78D9D28B088EA9DF58C6925121A2ADB2E23B383E035E17`
+- SHA256: `4E6ADB08F2848318CF4647073AF8415ED27B6BAB92BABC0E880959C73D145131`
 - 解压后直接运行 `ZaYuCursorHalo.exe`，无需安装。
 - 无 .NET / Electron / WebView2 / Qt / VC++ Redistributable 依赖。
 - 普通用户权限运行，不安装服务或驱动。
@@ -34,10 +34,10 @@ Windows 7 SP1 x86 优先的原生桌面鼠标高亮 / 键盘显示 / 浮动计�
 
 - x86，`/MT`，`SUBSYSTEM 6.01`。
 - Win7 构建门禁 PASS：无 Win8+ API、API set、UCRT、VCRuntime、DComp、Magnification 静态导入。
-- 静态 API 清单：[docs/WIN7_RELEASE_AUDIT.md](docs/WIN7_RELEASE_AUDIT.md)。
+- 构建与门禁说明：[BUILD.md](BUILD.md)。
 - 此前上传的 v0.3.0 构建（含音量与按键快照修复）已在 **Windows 7 SP1 真机**完成基础功能验证，运行正常。
 - 本次新增的拖尾设置页、堆叠串行动画、重置功能和关于页尚未在 Windows 7 SP1 真机回归。
-- 发布前请按 [docs/win7-compatibility.md](docs/win7-compatibility.md) 第 6 节在干净 Win7 SP1 x86/x64 上逐项确认；未实测不建议在发布说明中写“绝对兼容”。
+- 发布前请在干净 Win7 SP1 x86/x64 上逐项确认；具体步骤见 [BUILD.md](BUILD.md)。未实测不建议在发布说明中写“绝对兼容”。
 
 ## License
 

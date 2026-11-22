@@ -6,8 +6,7 @@
 
 开始任何功能前，先读：
 
-- [`docs/win7-compatibility.md`](docs/win7-compatibility.md)
-- [`docs/technical-roadmap.md`](docs/technical-roadmap.md)
+- [`BUILD.md`](BUILD.md)
 
 ## 强制要求
 

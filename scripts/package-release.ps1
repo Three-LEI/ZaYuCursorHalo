@@ -24,12 +24,8 @@ if (Test-Path $zip) { Remove-Item $zip -Force }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
 Copy-Item $exe (Join-Path $stage "ZaYuCursorHalo.exe")
-foreach ($file in @("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md")) {
+foreach ($file in @("README.md", "BUILD.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md")) {
     Copy-Item (Join-Path $root $file) (Join-Path $stage $file)
-}
-New-Item -ItemType Directory -Path (Join-Path $stage "docs") -Force | Out-Null
-Get-ChildItem (Join-Path $root "docs") -Filter "*.md" | ForEach-Object {
-    Copy-Item $_.FullName (Join-Path $stage "docs\$($_.Name)")
 }
 Copy-Item (Join-Path $root "artifacts") (Join-Path $stage "artifacts") -Recurse
 
